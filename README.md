@@ -96,7 +96,7 @@ Some heavy reference docs are installed as slash commands instead of always-load
 
 | Command | What | Profiles |
 |---------|------|----------|
-| `/scaffold` | Guide plan-to-project transition (create repos, install profiles) | global, fullstack |
+| `/scaffold` | Create sub-project repos from a plan (git init, bootstrap, install profiles) | global, fullstack |
 | `/react` | React best practices (57 rules) | nextjs, fullstack |
 | `/tailwind` | Tailwind v4 design system | nextjs, fullstack |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django-api, fullstack |
@@ -113,15 +113,21 @@ cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
 
 ## Workflow
 
-See [workflows/full-feature.md](workflows/full-feature.md) and [USAGE.md](USAGE.md) for the complete flow:
+See [USAGE.md](USAGE.md) for the complete walkthrough, or [QUICKSTART.md](QUICKSTART.md) for a cheat sheet.
 
-1. **Plan** — Brainstorm and scope in a root project folder
-2. **Scaffold** — Create sub-project repos and install profiles (new projects only)
-3. **Branch** — Create git worktrees per phase
-4. **Execute** — Implement with executor agent + stack skills
-5. **Verify** — Review with reviewer agent + verification skill
-6. **PR** — Commit with conventions, create PR
-7. **Merge** — Human review and merge
+**New project (MVP build):**
+
+1. **Brainstorm** — Shape the idea in a root project folder
+2. **Plan** — Turn the design into a phased implementation plan
+3. **Scaffold** — Create sub-project repos and install profiles
+4. **Execute** — Implement each phase on main with the executor agent
+5. **Review** — Verify each phase with the reviewer agent
+6. **Repeat** — Move through phases until the MVP is complete
+
+**Ongoing development:**
+
+- Single feature → branch, execute, review, PR, merge
+- Multiple independent features → use git worktrees for parallel work (see `skills/git/worktrees.md`)
 
 ## Cross-Repo Context
 

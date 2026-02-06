@@ -1,6 +1,6 @@
 # Polaris Usage Guide
 
-A step-by-step walkthrough for taking an idea from brainstorm to merged PR using the Polaris system. This assumes you've already run `./install.sh init` and `polaris global`.
+A step-by-step walkthrough for taking an idea from brainstorm to working application using the Polaris system. This assumes you've already run `./install.sh init` and `polaris global`.
 
 ---
 
@@ -20,7 +20,7 @@ Global skills (planning, brainstorming, writing) are already available via `pola
 
 Planning artifacts (design docs, `plan.md`) live in this folder as working files. They'll be copied into the actual project repos during scaffolding.
 
-After planning is done, use `/scaffold` to create sub-project repos (Step 2b below). The scaffold command will create sibling directories, git init each, run bootstrap commands, and install the right profiles. The sub-projects are the git repos — the root planning folder stays unversioned.
+After planning is done, use `/scaffold` to create sub-project repos as subdirectories (Step 2b below). The scaffold command will create subdirectories, git init each, run bootstrap commands, and install the right profiles.
 
 ### Path B: Jump Into an Existing Project
 
@@ -34,7 +34,7 @@ polaris project --profile django-api
 
 This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). For example, the `nextjs` and `fullstack` profiles install `/react` and `/tailwind` as on-demand commands to keep context light.
 
-Skip to Step 3 (Create Worktrees) if you already have a plan, or Step 1 if you want to brainstorm first.
+Skip to Step 3 (Execute) if you already have a plan, or Step 1 if you want to brainstorm first.
 
 ### CLAUDE.md (auto-generated)
 
@@ -88,19 +88,19 @@ Claude will follow the brainstorming skill:
 - Apply YAGNI aggressively — if you're unsure whether you need it, you don't
 - When Claude presents approaches, pick one and explain why (this becomes context later)
 
-**Output:** A design document saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
+**Output:** A design document saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Claude will suggest handing this off to the planner agent as the next step.
 
 ---
 
 ## Step 2: Plan
 
-Once you have a design you're happy with, turn it into a structured plan.
+Once you have a design you're happy with, turn it into a structured implementation plan. **Start a new session** so the planner agent gets fresh context.
 
-**In the same session (or a new one):**
+**Start the session:**
 
 ```
-You: Let's turn this design into a phased implementation plan. Use the 
-     plan-and-scope and phase-breakdown skills.
+You: Turn the design in docs/plans/[your-design].md into a phased implementation
+     plan. Use the plan-and-scope and phase-breakdown skills.
 ```
 
 Claude will produce a `plan.md` following the planning skills:
@@ -136,80 +136,34 @@ Claude will follow the scaffold skill to:
 
 1. Read the plan and identify what sub-projects are needed
 2. Present a scaffold summary for your approval
-3. Create sibling directories (e.g., `~/prj/my-app-api/`, `~/prj/my-app-web/`)
+3. Create subdirectories (e.g., `~/prj/my-app/api/`, `~/prj/my-app/web/`)
 4. Git init each
 5. Run the appropriate bootstrap commands (`/django-bootstrap`, `/nextjs-bootstrap`)
 6. Install Polaris profiles via `polaris project --profile X --target Y`
 7. Copy `plan.md` into each sub-project
 8. Optionally generate a VS Code workspace file
 
-After scaffolding, each sub-project is an independent repo with its own `.claude/` skills installed. Continue to Step 3 within each sub-project.
+After scaffolding, each sub-project is an independent repo with its own `.claude/` skills installed.
 
 **Skip this step** if you used Path B (existing project) or already have your repos set up.
 
 ---
 
-## Step 3: Create Worktrees
+## Step 3: Execute a Phase
 
-Now set up isolated workspaces for each phase. The `worktrees` skill handles creation, dependency installation, and baseline verification.
+For the initial MVP build, work directly on main — there's nothing to protect yet. Each phase builds on the last, and commits between phases give you natural review points.
 
-**Start the session:**
-
-```
-You: Set up worktrees for each phase in plan.md. Follow the worktrees skill
-     in .claude/skills/git/worktrees.md
-```
-
-Claude will follow the worktrees skill:
-
-1. Verify clean state on main
-2. Create a worktree + branch per phase as sibling directories (`backend-phase-1`, etc.)
-3. Auto-detect and install dependencies (Python/Node/Flutter)
-4. Run tests in each worktree to confirm a clean baseline
-5. Generate a VS Code `.code-workspace` file for the feature
-6. Report readiness per worktree
-
-Open the workspace file to see all phases in one VS Code window:
+Open a Claude Code session **in the sub-project directory.**
 
 ```bash
-code ~/prj/my-project/my-feature.code-workspace
-```
-
-You should see something like:
-
-```
-✓ Worktree ready: ../my-app-phase-1
-  Branch: feature/my-feature-phase-1
-  Base: main (abc1234)
-  Tests: 47 passing, 0 failures
-  Ready to execute Phase 1
-```
-
-**After worktrees are created,** install the skills profile in each one:
-
-```bash
-cd ../my-app-phase-1
-polaris project --profile django-api
-# repeat for each worktree
-```
-
-**If tests fail before you've changed anything,** fix them on main first. Don't start a phase with a broken baseline.
-
----
-
-## Step 4: Execute a Phase
-
-Open a Claude Code session **in the phase worktree directory.** This is where code gets written.
-
-```bash
-cd ../my-app-phase-1
+cd ~/prj/my-app/api
 # Start Claude Code here
 ```
 
 **Start the session:**
 
 ```
-You: We're executing Phase 1 of the plan. Read plan.md and the executor agent 
+You: Execute Phase 1 of the plan. Read plan.md and the executor agent
      in .claude/agents/executor.md, then implement Phase 1.
 ```
 
@@ -240,19 +194,19 @@ Claude will follow the executor agent:
 
 ---
 
-## Step 5: Verify
+## Step 4: Verify
 
-Open a **new, separate Claude Code session** in the same worktree. Fresh context is the point — the reviewer shouldn't inherit the executor's assumptions.
+Open a **new, separate Claude Code session** in the same directory. Fresh context is the point — the reviewer shouldn't inherit the executor's assumptions.
 
 ```bash
-cd ../my-app-phase-1
+cd ~/prj/my-app/api
 # Start a NEW Claude Code session
 ```
 
 **Start the session:**
 
 ```
-You: Review the code changes in this branch against plan.md Phase 1.
+You: Review the code changes for Phase 1 against plan.md.
      Use the reviewer agent in .claude/agents/reviewer.md
      and the verification skill for this stack.
 ```
@@ -270,64 +224,30 @@ Claude will follow the reviewer agent:
 
 - **PASS** — looks good
 - **WARN** — concern but not blocking
-- **FAIL** — needs to be fixed before merging
+- **FAIL** — needs to be fixed before moving on
 
-**If there are FAILs:** Fix them in this session or go back to step 4. Re-verify after fixes.
+**If there are FAILs:** Fix them in this session or go back to step 3. Re-verify after fixes.
 
-**If everything passes:** Move to the next step.
-
----
-
-## Step 6: Push and PR
-
-The executor should have been committing throughout Step 4 using the `commit-conventions` skill. Verify and push:
-
-```
-You: Review the commits on this branch. Make sure they follow the
-     commit-conventions skill. Then create a PR using the PR template
-     from that skill.
-```
-
-Claude will:
-
-1. Check commit messages follow conventional format (`type(scope): description`)
-2. Amend or squash if needed
-3. Push the branch
-4. Create a PR with the standard template (What / Why / Phase / Changes / Testing / Integration Notes)
+**If everything passes:** Move to the next phase.
 
 ---
 
-## Step 7: Human Review and Merge
+## Step 5: Next Phase
 
-This is you. Read the PR diff. Read the verification report. Merge when satisfied.
-
-**After merge,** clean up the worktree. You can do this manually or ask Claude:
+Continue to the next phase in the same sub-project:
 
 ```
-You: Phase 1 is merged. Clean up the worktree using the worktrees skill.
+You: Execute Phase 2 of the plan.
 ```
 
-Claude will remove the worktree, delete the local branch, and pull main. The worktrees skill also supports batch cleanup when all phases are done.
+Repeat the execute → verify cycle (Steps 3-4) for each phase until the sub-project is complete.
 
----
-
-## Step 8: Next Phase
-
-If there are more phases, move to the next worktree and repeat from Step 4.
+If there are multiple sub-projects (e.g., API then web), complete the API phases first, then move to the web sub-project:
 
 ```bash
-cd ../my-app-phase-2
+cd ~/prj/my-app/web
 # Start Claude Code here
 ```
-
-If this phase depends on a previous phase (now merged), ask Claude to rebase first:
-
-```
-You: Phase 1 is merged. Rebase this branch onto main and verify the
-     baseline tests still pass, per the worktrees skill.
-```
-
-Then proceed with execution (Step 4).
 
 ---
 
@@ -336,9 +256,9 @@ Then proceed with execution (Step 4).
 When a feature spans both repos, the flow is:
 
 ```
-Backend Phase  →  generates integration summary
+Backend phases  →  generates integration summary
                         ↓
-Frontend Phase  ←  consumes integration summary
+Frontend phases  ←  consumes integration summary
 ```
 
 The `integrator` agent and `cross-repo-context` skill manage this handoff.
@@ -355,18 +275,18 @@ Claude will examine serializers, views, and permissions to produce a summary at 
 
 **Before starting a frontend phase that consumes backend APIs:**
 
-Pull backend context into the frontend worktree using `context-pull.sh`:
+Pull backend context into the frontend using `context-pull.sh`:
 
 ```bash
-# From the frontend worktree (context-pull.sh is a separate script)
-~/prj/polaris/context-pull.sh ../my-api-phase-1
+# From the frontend sub-project
+~/prj/polaris/context-pull.sh ../api
 # Creates .claude/backend-context.md — Claude sees it automatically
 ```
 
 Or copy the integration summary directly:
 
 ```bash
-cp ../my-api/docs/integration/feature-name.md .claude/
+cp ../api/docs/integration/feature-name.md .claude/
 ```
 
 **Start the frontend session:**
@@ -379,21 +299,46 @@ You: We're building the frontend for [feature]. Read the integration summary
 
 ---
 
+## Ongoing Development
+
+Once you have a working application and are adding new features:
+
+### Single Feature
+
+Just use a branch:
+
+```bash
+git checkout -b feature/notifications
+# Start Claude Code, execute, review, PR, merge
+```
+
+### Multiple Independent Features in Parallel
+
+Use git worktrees to work on unrelated features simultaneously without stashing or context switching. See `skills/git/worktrees.md` for the full setup.
+
+```bash
+cd ~/prj/my-app/api
+git worktree add ../api-notifications -b feature/notifications
+git worktree add ../api-billing -b feature/billing
+# Each worktree is an isolated workspace with its own branch
+```
+
+---
+
 ## Quick Reference
 
 | Step | What | Where | Agent/Skill |
 |------|------|-------|-------------|
 | 0 | Project setup | Root folder | `polaris global` / `polaris project` |
 | 1 | Brainstorm | Root folder | `brainstorming` skill |
-| 2 | Plan | Root folder | `plan-and-scope` + `phase-breakdown` skills |
+| 2 | Plan | Root folder (new session) | `plan-and-scope` + `phase-breakdown` skills |
 | 2b | Scaffold (new projects) | Root folder | `/scaffold` command |
-| 3 | Create worktrees | Sub-project repo | `worktrees` skill |
-| 4 | Execute | Phase worktree | `executor` agent + stack skills (from profile) |
-| 5 | Verify | Phase worktree (new session) | `reviewer` agent + `verify-*` skill (from profile) |
-| 6 | PR | Phase worktree | `commit-conventions` skill |
-| 7 | Review + merge | GitHub / main repo | You |
-| 8 | Next phase | Next worktree | `worktrees` skill (rebase) → repeat from 4 |
+| 3 | Execute | Sub-project (on main) | `executor` agent + stack skills (from profile) |
+| 4 | Verify | Sub-project (new session) | `reviewer` agent + `verify-*` skill (from profile) |
+| 5 | Next phase | Sub-project | Repeat from 3 |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
+| — | Ongoing: single feature | Any repo | Branch → execute → review → PR |
+| — | Ongoing: parallel features | Any repo | Worktrees (see `skills/git/worktrees.md`) |
 
 ---
 
