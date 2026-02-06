@@ -1,0 +1,21 @@
+# Global skills — installed to ~/.claude/polaris/
+# These are available in every Claude Code session
+
+# Planning & workflow
+skills/planning/plan-and-scope.md
+skills/planning/phase-breakdown.md
+skills/planning/brainstorming.md
+
+# Writing
+skills/writing/writing-clearly.md
+
+# Meta (for authoring new skills)
+skills/meta/writing-skills.md
+
+# Git
+skills/git/commit-conventions.md
+skills/git/worktrees.md
+
+# Agents
+agents/planner.md
+agents/reviewer.md

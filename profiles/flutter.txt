@@ -1,0 +1,8 @@
+# Flutter app project skills
+
+skills/execution/flutter-patterns.md
+skills/verification/verify-flutter.md
+skills/execution/cross-repo-context.md
+skills/git/commit-conventions.md
+agents/executor.md
+agents/reviewer.md

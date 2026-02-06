@@ -1,0 +1,12 @@
+# Django API project skills
+
+skills/execution/django-patterns.md
+
+# On-demand bootstrap guide (invoke with /django-bootstrap)
+cmd:django-bootstrap=skills/execution/django-bootstrap.md
+
+skills/verification/verify-django.md
+skills/git/commit-conventions.md
+agents/executor.md
+agents/reviewer.md
+templates/integration-summary.md

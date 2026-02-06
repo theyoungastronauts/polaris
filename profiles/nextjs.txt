@@ -1,0 +1,13 @@
+# Next.js frontend project skills
+
+skills/execution/nextjs-patterns.md
+skills/execution/cross-repo-context.md
+skills/verification/verify-nextjs.md
+skills/git/commit-conventions.md
+agents/executor.md
+agents/reviewer.md
+
+# On-demand reference docs (invoke with /react, /tailwind, or /nextjs-bootstrap)
+cmd:react=skills/execution/react-best-practices.md
+cmd:tailwind=skills/execution/tailwind-v4-design-system.md
+cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
