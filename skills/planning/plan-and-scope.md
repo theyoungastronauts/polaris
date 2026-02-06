@@ -22,6 +22,7 @@ At the start of any new feature, refactor, or project. Always plan before execut
 - What existing code/APIs/services does this touch?
 - Are there cross-repo dependencies (backend ↔ frontend)?
 - What needs to exist before this can start?
+- **Repo strategy:** Will this be a monorepo (single `fullstack` profile) or separate repos per concern (e.g., `django-api` + `nextjs`)? Ask the user — this affects how `/scaffold` creates sub-projects and how phases are organized.
 
 ### 4. Identify Risks
 - What could go wrong?
@@ -54,6 +55,10 @@ One paragraph describing the desired outcome.
 
 ### Phase 2: [Name]
 ...
+
+## Repo Strategy
+Monorepo / Separate repos: [choice]
+Sub-projects: [e.g., api (django-api), web (nextjs)]
 
 ## Dependencies
 - ...

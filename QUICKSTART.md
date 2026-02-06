@@ -18,7 +18,7 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] Open Claude Code session
 - [ ] "Let's brainstorm [your idea] using the brainstorming skill"
 - [ ] Iterate until design is solid
-- [ ] Design doc saved to `docs/plans/`
+- [ ] Brainstorm saved to `docs/plans/YYYY-MM-DD-<topic>-brainstorm.md`
 
 ### 2. Plan
 
@@ -37,9 +37,9 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 
 - [ ] `cd` into sub-project (e.g., `~/prj/my-app/api/`)
 - [ ] Open Claude Code session
-- [ ] "Execute phase N of the plan" — commits on main as it goes
+- [ ] `/execute` — picks up the plan, confirms the phase, implements on main
 - [ ] When done, start a **new** Claude session
-- [ ] "Review phase N against the plan" — produces verification report
+- [ ] `/verify` — checks the work against the plan, produces verification report
 - [ ] Fix any FAILs, then move to next phase
 
 ### 5. Cross-Repo Handoff (if applicable)
@@ -52,6 +52,6 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 
 ## Ongoing Development
 
-**Single feature:** branch → execute → review → PR → merge
+**Single feature:** branch → `/execute` → `/verify` → PR → merge
 
 **Parallel features:** use git worktrees (`skills/git/worktrees.md`)

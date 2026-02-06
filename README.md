@@ -96,6 +96,8 @@ Some heavy reference docs are installed as slash commands instead of always-load
 
 | Command | What | Profiles |
 |---------|------|----------|
+| `/execute` | Execute a phase of the plan | global |
+| `/verify` | Verify a completed phase against the plan | global |
 | `/scaffold` | Create sub-project repos from a plan (git init, bootstrap, install profiles) | global, fullstack |
 | `/react` | React best practices (57 rules) | nextjs, fullstack |
 | `/tailwind` | Tailwind v4 design system | nextjs, fullstack |

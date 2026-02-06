@@ -36,7 +36,7 @@ Start by understanding the current project context, then ask questions one at a 
 
 **Documentation:**
 
-- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
+- Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-brainstorm.md`
 - If in a git repo, commit the design document
 
 **Next step:**

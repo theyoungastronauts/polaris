@@ -18,7 +18,7 @@ mkdir ~/prj/my-app && cd ~/prj/my-app
 
 Global skills (planning, brainstorming, writing) are already available via `polaris global`. No profile install needed — just open a Claude Code session and start brainstorming (Step 1 below).
 
-Planning artifacts (design docs, `plan.md`) live in this folder as working files. They'll be copied into the actual project repos during scaffolding.
+Planning artifacts (`*-brainstorm.md`, `plan.md`) live in this folder as working files. They'll be copied into the actual project repos during scaffolding.
 
 After planning is done, use `/scaffold` to create sub-project repos as subdirectories (Step 2b below). The scaffold command will create subdirectories, git init each, run bootstrap commands, and install the right profiles.
 
@@ -88,7 +88,7 @@ Claude will follow the brainstorming skill:
 - Apply YAGNI aggressively — if you're unsure whether you need it, you don't
 - When Claude presents approaches, pick one and explain why (this becomes context later)
 
-**Output:** A design document saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`. Claude will suggest handing this off to the planner agent as the next step.
+**Output:** A brainstorm document saved to `docs/plans/YYYY-MM-DD-<topic>-brainstorm.md`. Claude will suggest handing this off to the planner agent as the next step.
 
 ---
 
@@ -99,7 +99,7 @@ Once you have a design you're happy with, turn it into a structured implementati
 **Start the session:**
 
 ```
-You: Turn the design in docs/plans/[your-design].md into a phased implementation
+You: Turn the brainstorm in docs/plans/[your-brainstorm].md into a phased implementation
      plan. Use the plan-and-scope and phase-breakdown skills.
 ```
 
@@ -163,11 +163,10 @@ cd ~/prj/my-app/api
 **Start the session:**
 
 ```
-You: Execute Phase 1 of the plan. Read plan.md and the executor agent
-     in .claude/agents/executor.md, then implement Phase 1.
+You: /execute
 ```
 
-Claude will follow the executor agent:
+Claude will find the plan, ask which phase to execute, confirm, and start implementing:
 
 1. Read the plan and identify Phase 1's objective, tasks, and inputs
 2. Load the stack skills already installed by your profile (e.g. `django-patterns`, `commit-conventions`)
@@ -190,7 +189,7 @@ Claude will follow the executor agent:
 - Making assumptions about other phases' work
 - Not committing frequently enough
 
-**After execution completes,** Claude should summarize what was done and flag any deviations from the plan.
+**After execution completes,** Claude will summarize what was done, list commits, flag any deviations, and suggest running `/verify` in a new session.
 
 ---
 
@@ -206,19 +205,19 @@ cd ~/prj/my-app/api
 **Start the session:**
 
 ```
-You: Review the code changes for Phase 1 against plan.md.
-     Use the reviewer agent in .claude/agents/reviewer.md
-     and the verification skill for this stack.
+You: /verify
 ```
 
-Claude will follow the reviewer agent:
+Claude will find the plan, identify the phase from recent git history, and systematically check:
 
-1. Read the plan and identify Phase 1's acceptance criteria
-2. Load the verification skill installed by your profile (e.g. `verify-django`, `verify-nextjs`)
-3. Run through the verification checklist systematically
-4. Run tests and linting
-5. Check implementation against plan intent
-6. Produce a `verification-report.md`
+1. Tests pass
+2. Implementation matches the plan's acceptance criteria
+3. Security (auth, validation, no data leaks)
+4. Code quality (readable, tested, no dead code)
+5. Scope (nothing extra, nothing missing)
+6. Cross-repo contracts match (if applicable)
+
+It produces a `verification-report.md` with a results table and verdict.
 
 **The report will flag issues as:**
 
@@ -333,8 +332,8 @@ git worktree add ../api-billing -b feature/billing
 | 1 | Brainstorm | Root folder | `brainstorming` skill |
 | 2 | Plan | Root folder (new session) | `plan-and-scope` + `phase-breakdown` skills |
 | 2b | Scaffold (new projects) | Root folder | `/scaffold` command |
-| 3 | Execute | Sub-project (on main) | `executor` agent + stack skills (from profile) |
-| 4 | Verify | Sub-project (new session) | `reviewer` agent + `verify-*` skill (from profile) |
+| 3 | Execute | Sub-project (on main) | `/execute` command |
+| 4 | Verify | Sub-project (new session) | `/verify` command |
 | 5 | Next phase | Sub-project | Repeat from 3 |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
 | — | Ongoing: single feature | Any repo | Branch → execute → review → PR |

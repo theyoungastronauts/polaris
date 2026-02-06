@@ -258,7 +258,7 @@ Make this file executable: `chmod +x .husky/pre-commit`
 ```css
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: light, dark, coffee;
+  themes: light, dark;
 }
 ```
 
@@ -315,7 +315,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" data-theme="coffee">
+    <html lang="en" data-theme="dark">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <div className="min-h-screen bg-base-100 text-base-content">
           <Providers>{children}</Providers>

@@ -984,7 +984,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
 
   db:
-    image: postgres:15
+    image: postgres:16
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
