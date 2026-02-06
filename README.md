@@ -9,21 +9,32 @@ A version-controlled collection of skills, agents, and workflows for AI-assisted
 git clone <your-repo-url> ~/prj/polaris
 cd ~/prj/polaris
 
-# Initialize (saves repo location to ~/.polaris.conf)
+# Initialize (saves repo location, adds 'polaris' alias to your shell)
 ./install.sh init
+source ~/.zshrc  # or open a new terminal
 
 # Install global skills (available in every Claude session)
-./install.sh global
+polaris global
 
-# In a project directory, install stack-specific skills
+# Or with developer defaults in CLAUDE.md (recommended for first-time setup)
+polaris global --fresh
+```
+
+After init, use the `polaris` alias for all commands:
+
+```bash
+# Install stack-specific skills in a project
 cd ~/prj/my-django-api
-~/prj/polaris/install.sh project --profile django-api
+polaris project --profile django-api
+
+# Install into a specific directory (doesn't need to be a git repo yet)
+polaris project --profile nextjs --target ~/prj/my-app-web
 
 # Add project-specific extras not in any profile
-~/prj/polaris/install.sh project --profile django-api --extra skills/misc/vfx.md
+polaris project --profile django-api --extra skills/misc/vfx.md
 
 # Check what's installed and if updates are available
-~/prj/polaris/install.sh status
+polaris status
 ```
 
 ## Structure
@@ -85,6 +96,7 @@ Some heavy reference docs are installed as slash commands instead of always-load
 
 | Command | What | Profiles |
 |---------|------|----------|
+| `/scaffold` | Guide plan-to-project transition (create repos, install profiles) | global, fullstack |
 | `/react` | React best practices (57 rules) | nextjs, fullstack |
 | `/tailwind` | Tailwind v4 design system | nextjs, fullstack |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django-api, fullstack |
@@ -101,14 +113,15 @@ cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
 
 ## Workflow
 
-See [workflows/full-feature.md](workflows/full-feature.md) for the complete flow:
+See [workflows/full-feature.md](workflows/full-feature.md) and [USAGE.md](USAGE.md) for the complete flow:
 
-1. **Plan** — Use planner agent to scope and phase the work
-2. **Branch** — Create git worktrees per phase
-3. **Execute** — Implement with executor agent + stack skills
-4. **Verify** — Review with reviewer agent + verification skill
-5. **PR** — Commit with conventions, create PR
-6. **Merge** — Human review and merge
+1. **Plan** — Brainstorm and scope in a root project folder
+2. **Scaffold** — Create sub-project repos and install profiles (new projects only)
+3. **Branch** — Create git worktrees per phase
+4. **Execute** — Implement with executor agent + stack skills
+5. **Verify** — Review with reviewer agent + verification skill
+6. **PR** — Commit with conventions, create PR
+7. **Merge** — Human review and merge
 
 ## Cross-Repo Context
 
@@ -124,12 +137,14 @@ For full-stack work with decoupled repos:
 
 ## How It Works
 
-Running `install.sh init` also merges required settings into `~/.claude/settings.json` — tool permissions, deny rules, and LSP plugins. Existing settings are preserved; only missing entries are added. Requires `jq` (`brew install jq`).
+Running `./install.sh init` saves the repo location, adds a `polaris` shell alias, and merges required settings into `~/.claude/settings.json` — tool permissions, deny rules, and LSP plugins. Existing settings are preserved; only missing entries are added. Requires `jq` (`brew install jq`).
+
+Both `polaris global` and `polaris project` automatically generate a `CLAUDE.md` with references to all installed skills, agents, and commands. This is how Claude Code discovers your skills. By default it amends the existing CLAUDE.md (preserving your content); use `--fresh` with `polaris global` to start with a developer-defaults template, or `--no-claude-md` to skip generation entirely.
 
 The install script **copies** files (not symlinks) so projects work independently across machines. A checksum comparison lets you see what's stale:
 
 ```bash
-./install.sh status
+polaris status
 # ✓  current: skills/execution/django-patterns.md
 # ⚠  stale:   skills/verification/verify-django.md
 # ⚠  orphan:  skills/custom-thing.md (not in repo)
@@ -137,8 +152,8 @@ The install script **copies** files (not symlinks) so projects work independentl
 
 Update with:
 ```bash
-./install.sh global --force
-./install.sh project --profile django-api --force
+polaris global --force
+polaris project --profile django-api --force
 ```
 
 ## Customization

@@ -1,74 +1,52 @@
 # Workflow: Full Feature
 
 ## Overview
-End-to-end workflow for implementing a feature from plan to merged PR.
+End-to-end workflow for implementing a feature from plan to merged code.
 
 ## Steps
 
 ### 1. Plan
-```bash
-# Start a Claude session with the planner agent
-# Input: feature description / requirements
-# Output: plan.md
-```
 - Use the `planner` agent
 - Skills loaded: `plan-and-scope`, `phase-breakdown`
+- Output: `plan.md` with phased tasks
 - Review and iterate on the plan before proceeding
 
-### 2. Setup Worktrees
-```bash
-# Follow the worktrees skill (skills/git/worktrees.md)
-# From your repo root:
-REPO_NAME=$(basename $(pwd))
-FEATURE="[name]"
+### 1b. Scaffold (new projects only)
+If this is a new project with sub-repos to create:
+- Use `/scaffold` from the root planning folder
+- Creates sub-project directories, git inits, installs profiles
+- Skip this step for features in existing repos
 
-for PHASE in 1 2 3; do
-  git worktree add "../${REPO_NAME}-phase-${PHASE}" -b "feature/${FEATURE}-phase-${PHASE}"
-done
-```
-- Each worktree: install dependencies, verify tests pass (clean baseline)
-- Copy `plan.md` into each worktree (or reference from main)
-- Install relevant skills: `./install.sh project --profile [stack]`
+### 2. Execute — MVP Build
 
-### 3. Execute (per phase)
-```bash
-# In the phase worktree, start a Claude session
-# Load: executor agent + stack skills
-# Input: plan.md (focused on this phase)
-# Output: implemented code + tests
-```
-- Use the `executor` agent
-- Skills loaded: stack-specific patterns + commit-conventions
-- Commit frequently within the phase
+For initial builds where you're taking a plan from zero to working application, work directly on main. No branches or worktrees needed — there's nothing to protect yet.
 
-### 4. Verify (per phase)
-```bash
-# NEW Claude session in the same worktree
-# Load: reviewer agent + stack verification skill
-# Input: the code changes + plan.md
-# Output: verification-report.md
-```
-- Use the `reviewer` agent
-- Skills loaded: `verify-[framework]`
+Repeat for each phase:
+
+**Execute:**
+- Start a Claude session in the sub-project
+- Tell it: "Execute phase N of the plan"
+- The executor agent reads plan.md, implements, and commits as it goes
+
+**Review:**
+- Start a NEW Claude session in the same directory
+- Tell it: "Review phase N against the plan"
+- The reviewer agent checks the work and produces a verification report
 - Fix any FAIL items, re-verify if needed
 
-### 5. Commit & PR
-```bash
-# Ensure all commits follow conventions
-# Create PR with context from plan
-git push origin feature/[name]-phase-N
-# Create PR using the PR template from commit-conventions
-```
+**Commit and move on:**
+- Commits happen on main as the executor works
+- Between phases, the commit history provides a natural review point
+- If this phase produced API changes, generate the integration summary for frontend phases
+- Continue to the next phase
 
-### 6. Human Review & Merge
-- Review the PR + verification report
-- Merge when satisfied
-- Clean up worktree: `git worktree remove ../[repo]-phase-N` (see worktrees skill for batch cleanup)
+### 3. Execute — Ongoing Feature Work
 
-### 7. Cross-Repo Handoff (if applicable)
-- If this phase produced API changes, ensure integration summary is generated
-- Copy or commit the integration summary where the frontend can access it
-- Start the frontend phase with the integration summary as input
+Once you have a working application and are building new features on top of it:
+
+**Single feature:** check out a branch, execute, review, PR, merge. Simple.
+
+**Multiple independent features in parallel:** use git worktrees (see `skills/git/worktrees.md`). Each feature gets its own worktree so you can switch between them without stashing or losing context. This is where worktrees earn their keep.
 
 ## Tips
 - Don't skip the planning step — it saves time overall

@@ -1,16 +1,22 @@
-# Using Git Worktrees for Phased Development
+# Using Git Worktrees for Parallel Development
 
-> Inspired by [obra/superpowers](https://github.com/obra/superpowers), adapted for phase-based workflow.
+> Inspired by [obra/superpowers](https://github.com/obra/superpowers), adapted for feature-based workflow.
 
 ## Overview
 
-Create isolated workspaces per phase of a plan using git worktrees. Each phase gets its own branch, its own directory, and can be developed and reviewed independently.
+Git worktrees let you have multiple branches checked out simultaneously in separate directories. Each worktree is a full working copy with its own branch, dependencies, and state.
 
 ## When to Use
 
-- After a plan has been broken into phases (see `phase-breakdown` skill)
-- When starting execution of any phase
-- When you need parallel work on multiple phases
+- Working on multiple **independent** features at the same time on an existing project
+- Need to switch between unrelated tickets without stashing or losing context
+- Want isolated workspaces so parallel features don't interfere with each other
+
+## When NOT to Use
+
+- **Initial MVP builds** — work directly on main, there's nothing to protect yet
+- **Single features** — a regular branch is simpler and sufficient
+- **Sequential phases that build on each other** — just commit on main or merge between phases
 
 ## Setup Flow
 
@@ -30,44 +36,27 @@ git status --porcelain
 
 ### 2. Choose Worktree Location
 
-Worktrees are created as sibling directories to the repo within the project root. Typical project structure:
+Worktrees are created as sibling directories to the repo within the project root. Example with two features in flight:
 
 ```
 ~/prj/my-project/
-  backend/                 # git repo
-  frontend/                # git repo
-  resources/               # docs, designs, etc.
-  backend-phase-1/         # worktree
-  backend-phase-2/         # worktree
-  frontend-phase-1/        # worktree
-  user-auth.code-workspace # VS Code workspace for this feature
+  api/                     # git repo (main branch)
+  api-notifications/       # worktree (feature/notifications branch)
+  api-billing/             # worktree (feature/billing branch)
+  web/                     # git repo (main branch)
+  web-notifications/       # worktree (feature/notifications branch)
 ```
 
-Naming convention: `{repo-name}-phase-{N}` or `{repo-name}-{short-description}` for clarity.
+Naming convention: `{repo-name}-{feature-name}` for clarity.
 
 ### 3. Create Worktree
 
 ```bash
-# From the main repo root
+# From the repo root
 REPO_NAME=$(basename $(pwd))
-FEATURE="feature-name"
-PHASE=1
+FEATURE="notifications"
 
-# Create worktree with new branch
-git worktree add "../${REPO_NAME}-phase-${PHASE}" -b "feature/${FEATURE}-phase-${PHASE}"
-```
-
-For a full plan with multiple phases:
-
-```bash
-# Create all phase worktrees at once
-REPO_NAME=$(basename $(pwd))
-FEATURE="user-auth"
-
-for PHASE in 1 2 3; do
-  git worktree add "../${REPO_NAME}-phase-${PHASE}" -b "feature/${FEATURE}-phase-${PHASE}"
-  echo "✓ Created phase ${PHASE}: ../${REPO_NAME}-phase-${PHASE}"
-done
+git worktree add "../${REPO_NAME}-${FEATURE}" -b "feature/${FEATURE}"
 ```
 
 ### 4. Install Dependencies
@@ -75,7 +64,7 @@ done
 After creating a worktree, detect the project type and install dependencies:
 
 ```bash
-cd "../${REPO_NAME}-phase-${PHASE}"
+cd "../${REPO_NAME}-${FEATURE}"
 
 # Python
 if [ -f "pyproject.toml" ]; then
@@ -127,157 +116,110 @@ fi
 **If tests pass:** Report readiness:
 
 ```
-✓ Worktree ready: ../my-app-phase-1
-  Branch: feature/user-auth-phase-1
+✓ Worktree ready: ../api-notifications
+  Branch: feature/notifications
   Base: main (abc1234)
   Tests: 47 passing, 0 failures
-  Ready to execute Phase 1
+  Ready for development
 ```
 
 ### 6. Install Skills (if using Polaris)
 
 ```bash
 # From the worktree directory
-~/prj/polaris/install.sh project --profile django-api
+polaris project --profile django-api
 ```
 
 ### 7. Generate VS Code Workspace
 
-After creating all worktrees, generate a `.code-workspace` file in the project root so all phases are accessible from a single VS Code window.
+Generate a `.code-workspace` file so all active worktrees are accessible from a single VS Code window.
 
 ```bash
 # From the project root (parent of repos)
 PROJECT_DIR=$(pwd)
-FEATURE="user-auth"
 
-cat > "${PROJECT_DIR}/${FEATURE}.code-workspace" << EOF
+cat > "${PROJECT_DIR}/dev.code-workspace" << EOF
 {
   "folders": [
-    { "path": "backend", "name": "backend (main)" },
-    { "path": "backend-phase-1", "name": "Backend Phase 1" },
-    { "path": "backend-phase-2", "name": "Backend Phase 2" },
-    { "path": "frontend", "name": "frontend (main)" },
-    { "path": "frontend-phase-1", "name": "Frontend Phase 1" },
-    { "path": "resources", "name": "resources" }
+    { "path": "api", "name": "API (main)" },
+    { "path": "api-notifications", "name": "API - Notifications" },
+    { "path": "api-billing", "name": "API - Billing" },
+    { "path": "web", "name": "Web (main)" },
+    { "path": "web-notifications", "name": "Web - Notifications" }
   ],
   "settings": {}
 }
 EOF
 ```
 
-Only include folders that exist. Adjust the `folders` array to match the repos and phases for this feature. For single-repo projects, include just the main repo + its worktrees.
+Only include folders that exist. Update this file as worktrees are created and removed.
 
 Open with:
 
 ```bash
-code "${PROJECT_DIR}/${FEATURE}.code-workspace"
+code "${PROJECT_DIR}/dev.code-workspace"
 ```
 
 The sidebar shows each worktree as a labeled root with separate SCM panels per worktree.
 
 ## Working in Worktrees
 
-### Switching Between Phases
+### Switching Between Features
 
 Each worktree is a regular directory. Switch between them like any other project:
 
 ```bash
-cd ../my-app-phase-1   # work on phase 1
-cd ../my-app-phase-2   # switch to phase 2
-cd ../my-app            # back to main repo
+cd ../api-notifications   # work on notifications
+cd ../api-billing         # switch to billing
+cd ../api                 # back to main
 ```
 
-### Committing
+### Committing and PRs
 
 Commits in a worktree happen on that worktree's branch. Normal git workflow applies:
 
 ```bash
-# In phase 1 worktree
 git add .
-git commit -m "feat(auth): add user model and serializers"
-```
-
-### Keeping Phases Up to Date
-
-If phase 2 depends on phase 1 being merged, rebase after phase 1 merges:
-
-```bash
-# In phase 2 worktree, after phase 1 is merged to main
-git fetch origin
-git rebase origin/main
-```
-
-If phases are independent, no rebasing needed until merge time.
-
-### Pushing and Creating PRs
-
-```bash
-git push origin feature/user-auth-phase-1
-# Create PR via GitHub CLI or web UI
-gh pr create --title "feat(auth): Phase 1 - User model and API" \
-  --body "Part of user-auth plan. See plan.md for full context."
+git commit -m "feat(notifications): add push notification service"
+git push origin feature/notifications
+gh pr create --title "feat: add push notifications" \
+  --body "Implements notification service and delivery queue."
 ```
 
 ## Cleanup
 
-After a phase is merged and the PR is closed:
+After a feature is merged and the PR is closed:
 
 ```bash
 # From the main repo
-git worktree remove ../my-app-phase-1
-git branch -d feature/user-auth-phase-1  # delete local branch
-```
-
-Clean up all worktrees for a completed feature:
-
-```bash
-REPO_NAME=$(basename $(pwd))
-for PHASE in 1 2 3; do
-  WORKTREE="../${REPO_NAME}-phase-${PHASE}"
-  if [ -d "$WORKTREE" ]; then
-    git worktree remove "$WORKTREE"
-    echo "✓ Removed $WORKTREE"
-  fi
-done
-
-# Prune any stale worktree references
+git worktree remove ../api-notifications
+git branch -d feature/notifications  # delete local branch
 git worktree prune
-```
-
-Remove the VS Code workspace file when the feature is fully merged:
-
-```bash
-rm -f "../feature-name.code-workspace"
 ```
 
 ## Listing Active Worktrees
 
 ```bash
 git worktree list
-# /home/tyler/prj/my-app              abc1234 [main]
-# /home/tyler/prj/my-app-phase-1      def5678 [feature/user-auth-phase-1]
-# /home/tyler/prj/my-app-phase-2      ghi9012 [feature/user-auth-phase-2]
+# /home/tyler/prj/my-project/api                    abc1234 [main]
+# /home/tyler/prj/my-project/api-notifications       def5678 [feature/notifications]
+# /home/tyler/prj/my-project/api-billing              ghi9012 [feature/billing]
 ```
 
 ## Cross-Repo Worktrees
 
-For fullstack features with backend + frontend repos under the same project root:
+For features that span both backend and frontend repos:
 
 ```bash
 # From the project root (~/prj/my-project/)
-cd backend
-git worktree add ../backend-phase-1 -b feature/user-auth-phase-1
+cd api
+git worktree add ../api-notifications -b feature/notifications
 
-cd ../frontend
-git worktree add ../frontend-phase-2 -b feature/user-auth-phase-2
+cd ../web
+git worktree add ../web-notifications -b feature/notifications
 ```
 
-Then generate a single workspace file covering both repos and all worktrees (see step 7 above).
-
-Phase ordering for cross-repo work:
-1. Backend phases first (API + integration summary)
-2. Frontend phases consume the integration summary
-3. Never have a single phase spanning both repos
+Then generate a single workspace file covering both repos and their worktrees (see step 7 above).
 
 ## Common Issues
 

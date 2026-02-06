@@ -12,7 +12,7 @@ Start by understanding the current project context, then ask questions one at a 
 
 **Understanding the idea:**
 
-- Check out the current project state first (files, docs, recent commits)
+- Check out the current project state first (files, docs, recent commits if in a git repo)
 - Ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message — if a topic needs more exploration, break it into multiple questions
@@ -37,13 +37,13 @@ Start by understanding the current project context, then ask questions one at a 
 **Documentation:**
 
 - Write the validated design to `docs/plans/YYYY-MM-DD-<topic>-design.md`
-- Commit the design document to git
+- If in a git repo, commit the design document
 
-**Implementation (if continuing):**
+**Next step:**
 
-- Ask: "Ready to set up for implementation?"
-- Create isolated workspace (worktree) for the feature
-- Break into a detailed implementation plan with phases
+After committing the design doc, suggest:
+
+> "Design is saved. When you're ready to turn this into a phased implementation plan, start a new session with the planner agent — it will read this design doc and break it into scoped, executable phases."
 
 ## Key Principles
 

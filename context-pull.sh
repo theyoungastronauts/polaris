@@ -16,7 +16,6 @@ for use in frontend Claude Code sessions.
 Options:
   --output, -o PATH     Output file (default: .claude/backend-context.md)
   --apps, -a APPS       Comma-separated Django app names to include (default: all)
-  --include, -i GLOBS   Additional file patterns to include
   --help, -h            Show this help
 
 Examples:
@@ -32,13 +31,10 @@ EOF
 BACKEND_PATH=""
 OUTPUT=".claude/backend-context.md"
 APPS=""
-EXTRA_INCLUDES=""
-
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --output|-o)  OUTPUT="$2"; shift 2 ;;
         --apps|-a)    APPS="$2"; shift 2 ;;
-        --include|-i) EXTRA_INCLUDES="$2"; shift 2 ;;
         --help|-h)    usage ;;
         -*)           echo "Unknown option: $1"; usage ;;
         *)            BACKEND_PATH="$1"; shift ;;

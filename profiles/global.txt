@@ -5,6 +5,7 @@
 skills/planning/plan-and-scope.md
 skills/planning/phase-breakdown.md
 skills/planning/brainstorming.md
+cmd:scaffold=skills/planning/scaffold.md
 
 # Writing
 skills/writing/writing-clearly.md

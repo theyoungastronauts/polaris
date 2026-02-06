@@ -1,9 +1,5 @@
 # Fullstack project skills (backend + frontend)
 
-# Planning
-skills/planning/plan-and-scope.md
-skills/planning/phase-breakdown.md
-
 # Execution — both stacks
 skills/execution/django-patterns.md
 skills/execution/nextjs-patterns.md
@@ -19,12 +15,8 @@ cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
 skills/verification/verify-django.md
 skills/verification/verify-nextjs.md
 
-# Git
-skills/git/commit-conventions.md
-
 # Agents
 agents/executor.md
-agents/reviewer.md
 agents/integrator.md
 
 # Templates

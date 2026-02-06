@@ -1,52 +1,53 @@
 # Polaris Usage Guide
 
-A step-by-step walkthrough for taking an idea from brainstorm to merged PR using the Polaris system. This assumes you've already run `install.sh init` and `install.sh global`.
+A step-by-step walkthrough for taking an idea from brainstorm to merged PR using the Polaris system. This assumes you've already run `./install.sh init` and `polaris global`.
 
 ---
 
 ## Phase 0: Project Setup
 
-Before you start building, make sure the project repo is ready.
+There are two ways to start, depending on whether you need a planning/brainstorming phase first.
 
-**If starting a new project:**
+### Path A: Brainstorm First (recommended for new projects)
+
+Start with a root planning folder. This is just a plain directory — not a git repo. Brainstorm and plan here before creating any code repos.
 
 ```bash
 mkdir ~/prj/my-app && cd ~/prj/my-app
-git init
-
-# Scaffold your project (Django, Next.js, Flutter, etc.)
-# ...
-
-git add .
-git commit -m "chore: initial project scaffold"
 ```
 
-**If working in an existing project:**
+Global skills (planning, brainstorming, writing) are already available via `polaris global`. No profile install needed — just open a Claude Code session and start brainstorming (Step 1 below).
+
+Planning artifacts (design docs, `plan.md`) live in this folder as working files. They'll be copied into the actual project repos during scaffolding.
+
+After planning is done, use `/scaffold` to create sub-project repos (Step 2b below). The scaffold command will create sibling directories, git init each, run bootstrap commands, and install the right profiles. The sub-projects are the git repos — the root planning folder stays unversioned.
+
+### Path B: Jump Into an Existing Project
+
+If you already know what you're building and have a repo ready:
 
 ```bash
-cd ~/prj/my-app
-git checkout main
-git pull origin main
-```
-
-**Install the right profile:**
-
-```bash
-~/prj/polaris/install.sh project --profile django-api
+cd ~/prj/my-django-api
+polaris project --profile django-api
 # or: nextjs, flutter, fullstack
 ```
 
 This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). For example, the `nextjs` and `fullstack` profiles install `/react` and `/tailwind` as on-demand commands to keep context light.
 
-**Set up your CLAUDE.md** (if you don't have one yet):
+Skip to Step 3 (Create Worktrees) if you already have a plan, or Step 1 if you want to brainstorm first.
 
-Create a `CLAUDE.md` in the project root with project-specific context — tech stack, conventions, anything Claude should know. Reference the installed skills:
+### CLAUDE.md (auto-generated)
+
+Running `polaris global` or `polaris project` automatically generates a CLAUDE.md with references to all installed skills, agents, and commands. This is how Claude Code discovers your skills.
+
+- **Amend mode** (default): Adds/updates a Polaris section between `<!-- polaris:start -->` and `<!-- polaris:end -->` markers. Your own content outside these markers is preserved.
+- **Fresh mode** (`polaris global --fresh`): Creates a complete CLAUDE.md with developer defaults + skills. Useful for first-time setup. Backs up existing file to `.bak` if it has custom content.
+- **Skip** (`--no-claude-md`): Opt out of CLAUDE.md generation if you manage it manually.
+
+You can add project-specific context (stack, conventions) above or below the Polaris markers:
 
 ```markdown
 # Project: My App
-
-## Skills
-See .claude/skills/ and .claude/agents/ for workflow skills.
 
 ## Stack
 - Python 3.12, Django 5.1, DRF
@@ -54,6 +55,11 @@ See .claude/skills/ and .claude/agents/ for workflow skills.
 
 ## Conventions
 - ...
+
+<!-- polaris:start -->
+## Polaris Skills
+...auto-generated...
+<!-- polaris:end -->
 ```
 
 ---
@@ -65,7 +71,7 @@ Open a Claude Code session in your project directory. This is a conversation, no
 **Start the session:**
 
 ```
-You: I want to build [describe your idea]. Let's brainstorm this using the 
+You: I want to build [describe your idea]. Let's brainstorm this using the
      brainstorming skill in .claude/skills/planning/brainstorming.md
 ```
 
@@ -82,7 +88,7 @@ Claude will follow the brainstorming skill:
 - Apply YAGNI aggressively — if you're unsure whether you need it, you don't
 - When Claude presents approaches, pick one and explain why (this becomes context later)
 
-**Output:** A design document saved to `docs/plans/YYYY-MM-DD-<topic>-design.md` and committed to git.
+**Output:** A design document saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`.
 
 ---
 
@@ -112,12 +118,34 @@ Claude will produce a `plan.md` following the planning skills:
 - Is cross-repo work separated? (Backend phase → integration summary → frontend phase)
 - Is anything missing from scope?
 
-**Iterate** until the plan feels right, then commit it:
+**Iterate** until the plan feels right. If you're in a git repo, commit it. If you're in a root planning folder (Path A), the plan will be copied into sub-project repos during scaffolding.
 
-```bash
-git add plan.md
-git commit -m "docs: add implementation plan for [feature]"
+---
+
+## Step 2b: Scaffold Sub-Projects (new projects only)
+
+If you used Path A (brainstorm first) and need to create sub-project repos, use the `/scaffold` command.
+
+**In the same session (or a new one) in the root planning folder:**
+
 ```
+You: The plan is ready. Let's scaffold the sub-projects using /scaffold
+```
+
+Claude will follow the scaffold skill to:
+
+1. Read the plan and identify what sub-projects are needed
+2. Present a scaffold summary for your approval
+3. Create sibling directories (e.g., `~/prj/my-app-api/`, `~/prj/my-app-web/`)
+4. Git init each
+5. Run the appropriate bootstrap commands (`/django-bootstrap`, `/nextjs-bootstrap`)
+6. Install Polaris profiles via `polaris project --profile X --target Y`
+7. Copy `plan.md` into each sub-project
+8. Optionally generate a VS Code workspace file
+
+After scaffolding, each sub-project is an independent repo with its own `.claude/` skills installed. Continue to Step 3 within each sub-project.
+
+**Skip this step** if you used Path B (existing project) or already have your repos set up.
 
 ---
 
@@ -161,7 +189,7 @@ You should see something like:
 
 ```bash
 cd ../my-app-phase-1
-~/prj/polaris/install.sh project --profile django-api
+polaris project --profile django-api
 # repeat for each worktree
 ```
 
@@ -330,7 +358,7 @@ Claude will examine serializers, views, and permissions to produce a summary at 
 Pull backend context into the frontend worktree using `context-pull.sh`:
 
 ```bash
-# From the frontend worktree
+# From the frontend worktree (context-pull.sh is a separate script)
 ~/prj/polaris/context-pull.sh ../my-api-phase-1
 # Creates .claude/backend-context.md — Claude sees it automatically
 ```
@@ -355,10 +383,11 @@ You: We're building the frontend for [feature]. Read the integration summary
 
 | Step | What | Where | Agent/Skill |
 |------|------|-------|-------------|
-| 0 | Project setup | Main repo | `install.sh` |
-| 1 | Brainstorm | Main repo | `brainstorming` skill |
-| 2 | Plan | Main repo | `plan-and-scope` + `phase-breakdown` skills |
-| 3 | Create worktrees | Main repo | `worktrees` skill |
+| 0 | Project setup | Root folder | `polaris global` / `polaris project` |
+| 1 | Brainstorm | Root folder | `brainstorming` skill |
+| 2 | Plan | Root folder | `plan-and-scope` + `phase-breakdown` skills |
+| 2b | Scaffold (new projects) | Root folder | `/scaffold` command |
+| 3 | Create worktrees | Sub-project repo | `worktrees` skill |
 | 4 | Execute | Phase worktree | `executor` agent + stack skills (from profile) |
 | 5 | Verify | Phase worktree (new session) | `reviewer` agent + `verify-*` skill (from profile) |
 | 6 | PR | Phase worktree | `commit-conventions` skill |
