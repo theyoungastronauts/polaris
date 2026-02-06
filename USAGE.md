@@ -36,7 +36,7 @@ git pull origin main
 # or: nextjs, flutter, fullstack
 ```
 
-This copies skills into `.claude/polaris/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). For example, the `nextjs` and `fullstack` profiles install `/react` and `/tailwind` as on-demand commands to keep context light.
+This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). For example, the `nextjs` and `fullstack` profiles install `/react` and `/tailwind` as on-demand commands to keep context light.
 
 **Set up your CLAUDE.md** (if you don't have one yet):
 
@@ -46,7 +46,7 @@ Create a `CLAUDE.md` in the project root with project-specific context — tech 
 # Project: My App
 
 ## Skills
-See .claude/polaris/ for workflow skills.
+See .claude/skills/ and .claude/agents/ for workflow skills.
 
 ## Stack
 - Python 3.12, Django 5.1, DRF
@@ -66,7 +66,7 @@ Open a Claude Code session in your project directory. This is a conversation, no
 
 ```
 You: I want to build [describe your idea]. Let's brainstorm this using the 
-     brainstorming skill in .claude/polaris/skills/planning/brainstorming.md
+     brainstorming skill in .claude/skills/planning/brainstorming.md
 ```
 
 Claude will follow the brainstorming skill:
@@ -129,7 +129,7 @@ Now set up isolated workspaces for each phase. The `worktrees` skill handles cre
 
 ```
 You: Set up worktrees for each phase in plan.md. Follow the worktrees skill
-     in .claude/polaris/skills/git/worktrees.md
+     in .claude/skills/git/worktrees.md
 ```
 
 Claude will follow the worktrees skill:
@@ -182,7 +182,7 @@ cd ../my-app-phase-1
 
 ```
 You: We're executing Phase 1 of the plan. Read plan.md and the executor agent 
-     in .claude/polaris/agents/executor.md, then implement Phase 1.
+     in .claude/agents/executor.md, then implement Phase 1.
 ```
 
 Claude will follow the executor agent:
@@ -225,7 +225,7 @@ cd ../my-app-phase-1
 
 ```
 You: Review the code changes in this branch against plan.md Phase 1.
-     Use the reviewer agent in .claude/polaris/agents/reviewer.md
+     Use the reviewer agent in .claude/agents/reviewer.md
      and the verification skill for this stack.
 ```
 
@@ -319,7 +319,7 @@ The `integrator` agent and `cross-repo-context` skill manage this handoff.
 
 ```
 You: Generate an integration summary for the API changes in this phase.
-     Use the integrator agent in .claude/polaris/agents/integrator.md
+     Use the integrator agent in .claude/agents/integrator.md
      and the cross-repo-context skill.
 ```
 
@@ -332,20 +332,20 @@ Pull backend context into the frontend worktree using `context-pull.sh`:
 ```bash
 # From the frontend worktree
 ~/prj/polaris/context-pull.sh ../my-api-phase-1
-# Creates .claude/polaris/backend-context.md — Claude sees it automatically
+# Creates .claude/backend-context.md — Claude sees it automatically
 ```
 
 Or copy the integration summary directly:
 
 ```bash
-cp ../my-api/docs/integration/feature-name.md .claude/polaris/
+cp ../my-api/docs/integration/feature-name.md .claude/
 ```
 
 **Start the frontend session:**
 
 ```
 You: We're building the frontend for [feature]. Read the integration summary
-     in .claude/polaris/ and the plan, then execute this phase.
+     in .claude/ and the plan, then execute this phase.
      Use the executor agent and cross-repo-context skill.
 ```
 
@@ -377,4 +377,4 @@ You: We're building the frontend for [feature]. Read the integration summary
 - **Integration summaries are contracts.** If the backend changes, update the summary before the frontend consumes it.
 - **Use `/compact` in Claude Code** when context gets heavy during long execution phases.
 - **Use `/react` or `/tailwind` when you need them.** These are on-demand commands — they only load into context when invoked, keeping your baseline token usage low.
-- **When in doubt, check the skills.** They're in `.claude/polaris/` — read them if you forget the conventions.
+- **When in doubt, check the skills.** They're in `.claude/skills/` and `.claude/agents/` — read them if you forget the conventions.

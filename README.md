@@ -90,7 +90,7 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django-api, fullstack |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs, fullstack |
 
-Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of `.claude/polaris/`:
+Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of the default location:
 
 ```
 cmd:react=skills/execution/react-best-practices.md
@@ -118,7 +118,7 @@ For full-stack work with decoupled repos:
 # From your frontend repo, pull backend context
 ~/prj/polaris/context-pull.sh ../backend-api
 
-# Context lands in .claude/polaris/backend-context.md
+# Context lands in .claude/backend-context.md
 # Claude Code will see it automatically
 ```
 
@@ -147,5 +147,5 @@ Update with:
 - **Add a profile**: Create a `.txt` file in `profiles/` listing the files to include
 - **Add an on-demand command**: Use `cmd:name=path/to/skill.md` in a profile to install as `/name` slash command
 - **Add a project-specific skill**: Put it in `skills/misc/` and install with `--extra skills/misc/my-skill.md` (keeps it out of profiles)
-- **Project overrides**: Edit files in your project's `.claude/polaris/` — they won't be overwritten unless you use `--force`
+- **Project overrides**: Edit installed files in your project's `.claude/` — they won't be overwritten unless you use `--force`
 - **Add an agent**: Create a `.md` file in `agents/`

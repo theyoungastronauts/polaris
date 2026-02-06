@@ -14,7 +14,7 @@ Extracts relevant backend files into a condensed context document
 for use in frontend Claude Code sessions.
 
 Options:
-  --output, -o PATH     Output file (default: .claude/polaris/backend-context.md)
+  --output, -o PATH     Output file (default: .claude/backend-context.md)
   --apps, -a APPS       Comma-separated Django app names to include (default: all)
   --include, -i GLOBS   Additional file patterns to include
   --help, -h            Show this help
@@ -30,7 +30,7 @@ EOF
 # ---- Parse args ----
 
 BACKEND_PATH=""
-OUTPUT=".claude/polaris/backend-context.md"
+OUTPUT=".claude/backend-context.md"
 APPS=""
 EXTRA_INCLUDES=""
 

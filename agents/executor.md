@@ -22,4 +22,4 @@ You are an execution agent. Your job is to implement a single phase from an exis
 ## Context Management
 - Use /compact when context gets heavy
 - Keep CLAUDE.md and any project-specific docs loaded
-- Reference integration summaries from other repos when available in .claude/polaris/
+- Reference integration summaries from other repos when available in .claude/

@@ -1,4 +1,4 @@
-# Global skills — installed to ~/.claude/polaris/
+# Global skills — installed to ~/.claude/
 # These are available in every Claude Code session
 
 # Planning & workflow

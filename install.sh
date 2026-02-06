@@ -146,14 +146,14 @@ ensure_init() {
     fi
 }
 
-# Copy a file from the repo to a target dir, preserving relative path under a namespace
+# Copy a file from the repo to a target dir, preserving relative path
 copy_skill() {
     local src="$1"       # relative path in repo, e.g. skills/execution/django-patterns.md
     local dest_dir="$2"  # target root, e.g. /path/to/project/.claude
     local dry_run="${3:-false}"
     local force="${4:-false}"
 
-    local dest="$dest_dir/polaris/$src"
+    local dest="$dest_dir/$src"
     _copy_file "$src" "$dest" "$dry_run" "$force"
 }
 
@@ -306,17 +306,23 @@ cmd_project() {
 
     echo ""
     ok "Project install complete ($profile)"
-    info "Files are in .claude/polaris/ — reference them from your CLAUDE.md"
+    info "Files are in .claude/ — reference them from your CLAUDE.md"
 }
 
 cmd_status() {
     ensure_init
 
     echo ""
-    info "Checking global installs ($GLOBAL_CLAUDE_DIR/polaris/)..."
-    if [[ -d "$GLOBAL_CLAUDE_DIR/polaris" ]]; then
-        find "$GLOBAL_CLAUDE_DIR/polaris" -type f -name "*.md" | while read -r dest; do
-            local rel="${dest#$GLOBAL_CLAUDE_DIR/polaris/}"
+    info "Checking global installs ($GLOBAL_CLAUDE_DIR/)..."
+    local found_global=false
+    for subdir in skills agents workflows templates; do
+        if [[ -d "$GLOBAL_CLAUDE_DIR/$subdir" ]]; then
+            found_global=true
+        fi
+    done
+    if [[ "$found_global" == "true" ]]; then
+        find "$GLOBAL_CLAUDE_DIR/skills" "$GLOBAL_CLAUDE_DIR/agents" "$GLOBAL_CLAUDE_DIR/workflows" "$GLOBAL_CLAUDE_DIR/templates" -type f -name "*.md" 2>/dev/null | while read -r dest; do
+            local rel="${dest#$GLOBAL_CLAUDE_DIR/}"
             if [[ -f "$SKILLS_REPO/$rel" ]]; then
                 local src_hash dest_hash
                 src_hash="$(shasum -a 256 "$SKILLS_REPO/$rel" | cut -d' ' -f1)"
@@ -347,11 +353,19 @@ cmd_status() {
     # Check current project if in a git repo
     local project_dir
     project_dir="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-    if [[ -n "$project_dir" && -d "$project_dir/.claude/polaris" ]]; then
+    local found_project=false
+    if [[ -n "$project_dir" ]]; then
+        for subdir in skills agents workflows templates; do
+            if [[ -d "$project_dir/.claude/$subdir" ]]; then
+                found_project=true
+            fi
+        done
+    fi
+    if [[ "$found_project" == "true" ]]; then
         echo ""
-        info "Checking project installs ($project_dir/.claude/polaris/)..."
-        find "$project_dir/.claude/polaris" -type f -name "*.md" | while read -r dest; do
-            local rel="${dest#$project_dir/.claude/polaris/}"
+        info "Checking project installs ($project_dir/.claude/)..."
+        find "$project_dir/.claude/skills" "$project_dir/.claude/agents" "$project_dir/.claude/workflows" "$project_dir/.claude/templates" -type f -name "*.md" 2>/dev/null | while read -r dest; do
+            local rel="${dest#$project_dir/.claude/}"
             if [[ -f "$SKILLS_REPO/$rel" ]]; then
                 local src_hash dest_hash
                 src_hash="$(shasum -a 256 "$SKILLS_REPO/$rel" | cut -d' ' -f1)"
