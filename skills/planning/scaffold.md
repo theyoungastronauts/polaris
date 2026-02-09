@@ -45,7 +45,54 @@ Scaffold Plan:
 
 Let the user adjust names, add/remove stacks, or change directories before proceeding.
 
-### 3. Create and Initialize
+### 3. Gather Bootstrap Configuration
+
+Before creating anything, collect all bootstrap inputs from the user so teammate agents
+can run non-interactively. Bootstrap commands ask interactive questions — if multiple
+agents prompt simultaneously, it's unusable.
+
+**For each sub-project, ask the user for the required values upfront:**
+
+Django bootstrap values:
+- Service/directory name (e.g., `my_service`)
+- Docker Compose project name (kebab-case, e.g., `my-service`)
+- Database name (snake_case, e.g., `my_service`)
+- Host port (default: `8000`)
+- Cache key prefix (e.g., `myserv`)
+- Heroku app name (if deploying, or skip)
+
+Next.js bootstrap values:
+- App name (e.g., `my-app`)
+- Backend API port (default: `8000` — match the Django port above)
+- Production domain (e.g., `myapp.com`)
+- App display title (e.g., `My App`)
+- Architecture mode: frontend-centric, SSR-centric, or combination
+
+Use the design doc and project name to propose sensible defaults for most of these.
+Present them as a table the user can confirm or override:
+
+```
+Bootstrap Configuration:
+
+  Django (server/):
+    Service name:    my_service      (from project name)
+    Compose project: my-service
+    Database:        my_service
+    Host port:       8000
+    Cache prefix:    myserv
+    Heroku app:      (skip)
+
+  Next.js (web/):
+    App name:        my-app
+    API port:        8000            (matches Django above)
+    Domain:          myapp.com
+    Display title:   My App
+    Architecture:    SSR-centric     (recommended for new projects)
+
+  Look right? [Y/n]
+```
+
+### 4. Create and Initialize
 
 For each sub-project:
 
@@ -57,21 +104,26 @@ git init
 
 Naming convention: `{suffix}` = role (`api`, `web`, `mobile`, `admin`) as a subdirectory of the root.
 
-### 4. Run Bootstrap Commands
+### 5. Run Bootstrap Commands
 
 When there are multiple sub-projects, bootstrap them in parallel using a team.
 Sub-projects have no shared code at this stage, so there are no conflicts.
+
+All configuration was gathered in step 3 — agents receive pre-filled values and
+should not prompt the user for any bootstrap inputs.
 
 **Parallel bootstrap (2+ sub-projects):**
 
 1. Create a team named "scaffold" using TeamCreate
 2. Spawn one agent per sub-project using the Task tool with `team_name: "scaffold"`:
 
-   For each sub-project, spawn a general-purpose agent with:
+   For each sub-project, spawn a general-purpose agent with the pre-filled config:
    > You are bootstrapping the {label} sub-project at {root}/{suffix}/.
-   > Read the design doc at docs/plans/*.md for project context.
-   > Run the bootstrap command: {bootstrap_command}
-   > Use the design doc to suggest sensible placeholder values (project name, app names, etc.).
+   > Read the bootstrap skill at .claude/commands/{bootstrap_command}.md and follow it.
+   > Use these pre-filled configuration values (do NOT prompt the user for these):
+   >
+   > {list all key=value pairs from step 3 for this sub-project}
+   >
    > After bootstrap completes, run: git add . && git commit -m "chore: initial {label} scaffold"
    > Report back what was created.
 
@@ -82,13 +134,13 @@ Sub-projects have no shared code at this stage, so there are no conflicts.
 
 1. Change into the sub-project directory
 2. Invoke the bootstrap command (`/django-bootstrap` or `/nextjs-bootstrap`)
-3. Use design doc context to suggest sensible placeholder values
+3. Use the pre-filled configuration values from step 3
 4. After bootstrap completes, make an initial commit:
    ```bash
    git add . && git commit -m "chore: initial project scaffold"
    ```
 
-### 5. Generate VS Code Workspace (Optional)
+### 6. Generate VS Code Workspace (Optional)
 
 ```json
 {
@@ -102,7 +154,7 @@ Sub-projects have no shared code at this stage, so there are no conflicts.
 
 Save as `{root}/{root-name}.code-workspace`.
 
-### 6. Report Summary
+### 7. Report Summary
 
 ```
 Scaffold complete:
