@@ -197,7 +197,7 @@ class BookList extends _$BookList {
 }
 ```
 
-### Form provider (AsyncNotifier)
+### Form provider (Notifier)
 
 ```dart
 // book_form_provider.dart
@@ -384,7 +384,7 @@ Singleton Dio instance with interceptor chain: auth, token refresh, logging.
 class DioClient {
   final Dio _dio;
 
-  DioClient({required String baseUrl, required SessionProvider session}) : _dio = Dio(
+  DioClient({required String baseUrl, required Session session}) : _dio = Dio(
     BaseOptions(
       baseUrl: baseUrl,
       connectTimeout: const Duration(seconds: 10),
