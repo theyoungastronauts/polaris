@@ -31,13 +31,16 @@ Usage: ./install.sh <command> [options]
 Commands:
   init                  First-time setup — saves repo location
   global                Install global skills to ~/.claude/
-  project [--profile X] Install skills into a project's .claude/
+  new <path>            Create a new project with stack context (for brainstorming)
+  project               Install skills into a project's .claude/ (interactive stack selection)
   status                Show what's installed and if anything is stale
-  list-profiles         List available profiles
+  list-profiles         List available profiles and stacks
   list-skills           List all available skills and agents
 
 Options:
-  --profile, -p NAME    Profile to install (see profiles/ dir)
+  --stack, -s NAME      Stack to install (repeatable: --stack django --stack nextjs)
+                        Override default directory: --stack django:server
+  --profile, -p NAME    Legacy: install a single profile (non-composable)
   --target, -t DIR      Target directory (default: current git root)
   --extra, -e PATH      Additional skill to install (can be repeated)
   --dry-run, -n         Show what would be copied without copying
@@ -49,10 +52,12 @@ Examples:
   ./install.sh init
   ./install.sh global
   ./install.sh global --fresh
-  ./install.sh project --profile django-api
-  ./install.sh project --profile django-api --target ~/prj/my-app-api
-  ./install.sh project --profile django-api --extra skills/misc/vfx.md
-  ./install.sh project --profile fullstack
+  ./install.sh new ~/prj/my-app                         # create project, select stacks, brainstorm
+  ./install.sh new ~/prj/my-app --stack django --stack nextjs
+  ./install.sh project                                  # interactive stack selection
+  ./install.sh project --stack django --stack nextjs     # non-interactive
+  ./install.sh project --stack django:api --stack nextjs:client
+  ./install.sh project --profile django                  # legacy single-profile mode
   ./install.sh status
 EOF
     exit 1
@@ -102,6 +107,9 @@ REQUIRED_SETTINGS='
   "enabledPlugins": {
     "pyright-lsp@claude-plugins-official": true,
     "typescript-lsp@claude-plugins-official": true
+  },
+  "env": {
+    "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   }
 }
 '
@@ -128,7 +136,8 @@ _merge_settings() {
                     "allow": ([$existing.permissions.allow // [], $required.permissions.allow] | add | unique),
                     "deny": ([$existing.permissions.deny // [], $required.permissions.deny] | add | unique)
                 },
-                "enabledPlugins": (($existing.enabledPlugins // {}) * $required.enabledPlugins)
+                "enabledPlugins": (($existing.enabledPlugins // {}) * $required.enabledPlugins),
+                "env": (($existing.env // {}) * $required.env)
             }
         ' "$settings_file" <(echo "$REQUIRED_SETTINGS"))
 
@@ -288,6 +297,261 @@ read_profile() {
     grep -v '^\s*#' "$profile_file" | grep -v '^\s*$'
 }
 
+# ---- Stack composition helpers ----
+
+# Parse metadata headers from a profile file
+# Sets global vars: _STACK_TYPE, _STACK_LABEL, _STACK_DIRECTORY
+_read_profile_metadata() {
+    local profile_file="$1"
+    _STACK_TYPE=""
+    _STACK_LABEL=""
+    _STACK_DIRECTORY=""
+
+    while IFS= read -r line; do
+        case "$line" in
+            "# stack: "*)     _STACK_TYPE="${line#\# stack: }" ;;
+            "# label: "*)     _STACK_LABEL="${line#\# label: }" ;;
+            "# directory: "*) _STACK_DIRECTORY="${line#\# directory: }" ;;
+            "#"*)             ;; # other comments
+            *)                break ;; # stop at first non-comment line
+        esac
+    done < "$profile_file"
+}
+
+# Discover stack profiles by category (backend or frontend)
+# Outputs: profile names (one per line)
+_discover_stacks() {
+    local category="$1"
+
+    for f in "$SKILLS_REPO"/profiles/*.txt; do
+        [[ -f "$f" ]] || continue
+        [[ "$(basename "$f")" == _* ]] && continue
+        _read_profile_metadata "$f"
+        if [[ "$_STACK_TYPE" == "$category" ]]; then
+            basename "$f" .txt
+        fi
+    done
+}
+
+# Look up a stack's directory from the parallel arrays STACK_NAMES / STACK_DIRS
+_get_stack_dir() {
+    local name="$1"
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        if [[ "${STACK_NAMES[$i]}" == "$name" ]]; then
+            echo "${STACK_DIRS[$i]}"
+            return
+        fi
+    done
+    echo ""
+}
+
+# Set a stack's directory in the parallel arrays
+_set_stack_dir() {
+    local name="$1"
+    local dir="$2"
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        if [[ "${STACK_NAMES[$i]}" == "$name" ]]; then
+            STACK_DIRS[$i]="$dir"
+            return
+        fi
+    done
+    # Not found — append
+    STACK_NAMES+=("$name")
+    STACK_DIRS+=("$dir")
+}
+
+# Interactive stack selection
+# Populates STACK_NAMES and STACK_DIRS arrays
+_interactive_select() {
+    echo ""
+    echo -e "${BLUE}Polaris — Project Setup${NC}"
+    echo ""
+
+    # Discover available stacks
+    local backends=()
+    local backend_labels=()
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        backends+=("$name")
+        _read_profile_metadata "$SKILLS_REPO/profiles/${name}.txt"
+        backend_labels+=("$_STACK_LABEL")
+    done < <(_discover_stacks "backend")
+
+    local frontends=()
+    local frontend_labels=()
+    while IFS= read -r name; do
+        [[ -z "$name" ]] && continue
+        frontends+=("$name")
+        _read_profile_metadata "$SKILLS_REPO/profiles/${name}.txt"
+        frontend_labels+=("$_STACK_LABEL")
+    done < <(_discover_stacks "frontend")
+
+    # Select backend
+    if [[ ${#backends[@]} -gt 0 ]]; then
+        echo "Select a backend (enter number, or s to skip):"
+        local i
+        for (( i=0; i<${#backends[@]}; i++ )); do
+            echo "  $((i+1))) ${backend_labels[$i]}"
+        done
+        echo "  s) Skip"
+        echo ""
+        local choice
+        read -rp "> " choice
+        if [[ "$choice" != "s" && "$choice" != "S" && -n "$choice" ]]; then
+            local idx=$((choice - 1))
+            if [[ $idx -ge 0 && $idx -lt ${#backends[@]} ]]; then
+                local bname="${backends[$idx]}"
+                _read_profile_metadata "$SKILLS_REPO/profiles/${bname}.txt"
+                _set_stack_dir "$bname" "$_STACK_DIRECTORY"
+            else
+                err "Invalid selection"
+                exit 1
+            fi
+        fi
+        echo ""
+    fi
+
+    # Select frontend(s)
+    if [[ ${#frontends[@]} -gt 0 ]]; then
+        echo "Select frontend(s) (space-separated numbers, or s to skip):"
+        local i
+        for (( i=0; i<${#frontends[@]}; i++ )); do
+            echo "  $((i+1))) ${frontend_labels[$i]}"
+        done
+        echo "  s) Skip"
+        echo ""
+        local choices
+        read -rp "> " choices
+        if [[ "$choices" != "s" && "$choices" != "S" && -n "$choices" ]]; then
+            for choice in $choices; do
+                local idx=$((choice - 1))
+                if [[ $idx -ge 0 && $idx -lt ${#frontends[@]} ]]; then
+                    local fname="${frontends[$idx]}"
+                    _read_profile_metadata "$SKILLS_REPO/profiles/${fname}.txt"
+                    _set_stack_dir "$fname" "$_STACK_DIRECTORY"
+                else
+                    warn "Skipping invalid selection: $choice"
+                fi
+            done
+        fi
+        echo ""
+    fi
+
+    # Must have at least one stack
+    if [[ ${#STACK_NAMES[@]} -eq 0 ]]; then
+        err "No stacks selected. Use --profile for non-stack profiles."
+        exit 1
+    fi
+
+    # Prompt for directory overrides
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        local name="${STACK_NAMES[$i]}"
+        local default_dir="${STACK_DIRS[$i]}"
+        _read_profile_metadata "$SKILLS_REPO/profiles/${name}.txt"
+        local label="$_STACK_LABEL"
+        local dir
+        read -rp "Directory for ${label} [${default_dir}]: " dir
+        if [[ -n "$dir" ]]; then
+            STACK_DIRS[$i]="$dir"
+        fi
+    done
+    echo ""
+
+    # Confirmation
+    echo "Will install:"
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        local name="${STACK_NAMES[$i]}"
+        _read_profile_metadata "$SKILLS_REPO/profiles/${name}.txt"
+        local category="$_STACK_TYPE"
+        local label="$_STACK_LABEL"
+        local dir="${STACK_DIRS[$i]}"
+        local cap_category
+        cap_category="$(echo "$category" | sed 's/^./\U&/')"
+        echo "  ${cap_category}: ${label} → ${dir}/"
+    done
+    echo ""
+
+    local confirm
+    read -rp "Proceed? [Y/n] " confirm
+    if [[ "$confirm" == "n" || "$confirm" == "N" ]]; then
+        echo "Cancelled."
+        exit 0
+    fi
+}
+
+# Merge multiple stack profiles into deduplicated lines
+# Output: one profile line per line (skills, cmd: entries, agents, etc.)
+_merge_profiles() {
+    # Args: stack names
+    local stacks=("$@")
+    local seen_keys=()
+    local merged_lines=()
+
+    for stack in "${stacks[@]}"; do
+        while IFS= read -r line; do
+            local key="$line"
+            if [[ "$line" == cmd:* ]]; then
+                key="${line%%=*}"
+            fi
+            # Check if already seen
+            local found=false
+            local k
+            for k in "${seen_keys[@]+"${seen_keys[@]}"}"; do
+                if [[ "$k" == "$key" ]]; then
+                    found=true
+                    break
+                fi
+            done
+            if [[ "$found" == "false" ]]; then
+                seen_keys+=("$key")
+                merged_lines+=("$line")
+            fi
+        done < <(read_profile "$stack")
+    done
+
+    # Add multi-stack items if more than one stack
+    if [[ ${#stacks[@]} -gt 1 ]] && [[ -f "$SKILLS_REPO/profiles/_multi-stack.txt" ]]; then
+        while IFS= read -r line; do
+            local key="$line"
+            local found=false
+            local k
+            for k in "${seen_keys[@]+"${seen_keys[@]}"}"; do
+                if [[ "$k" == "$key" ]]; then
+                    found=true
+                    break
+                fi
+            done
+            if [[ "$found" == "false" ]]; then
+                seen_keys+=("$key")
+                merged_lines+=("$line")
+            fi
+        done < <(read_profile "_multi-stack")
+    fi
+
+    printf '%s\n' "${merged_lines[@]}"
+}
+
+# Generate stack context markdown from .claude.md snippets
+_generate_stack_context() {
+    local output=""
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        local name="${STACK_NAMES[$i]}"
+        local dir="${STACK_DIRS[$i]}"
+        local snippet="$SKILLS_REPO/profiles/${name}.claude.md"
+        if [[ -f "$snippet" ]]; then
+            local content
+            content="$(cat "$snippet")"
+            content="${content//\{directory\}/$dir}"
+            output+="$content"$'\n\n'
+        fi
+    done
+    echo "$output"
+}
+
 # ---- CLAUDE.md generation ----
 
 # Extract the first heading from a skill file as a human-readable title
@@ -301,7 +565,107 @@ _extract_title() {
     fi
 }
 
-# Generate the marker-wrapped Polaris skills block from a profile
+# Categorize a list of lines into skills/agents/workflows/templates/commands arrays
+# Reads from stdin, populates global arrays: _BLK_SKILLS, _BLK_AGENTS, etc.
+_categorize_lines() {
+    _BLK_SKILLS=()
+    _BLK_AGENTS=()
+    _BLK_WORKFLOWS=()
+    _BLK_TEMPLATES=()
+    _BLK_COMMANDS=()
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        if [[ "$line" == cmd:* ]]; then
+            local cmd_part="${line#cmd:}"
+            local cmd_name="${cmd_part%%=*}"
+            _BLK_COMMANDS+=("$cmd_name")
+        elif [[ "$line" == skills/* ]]; then
+            _BLK_SKILLS+=("$line")
+        elif [[ "$line" == agents/* ]]; then
+            _BLK_AGENTS+=("$line")
+        elif [[ "$line" == workflows/* ]]; then
+            _BLK_WORKFLOWS+=("$line")
+        elif [[ "$line" == templates/* ]]; then
+            _BLK_TEMPLATES+=("$line")
+        fi
+    done
+}
+
+# Emit the formatted polaris block content (between markers)
+# Args: descriptor, path_note, stack_context (optional)
+_emit_polaris_block() {
+    local descriptor="$1"
+    local path_note="$2"
+    local stack_context="${3:-}"
+
+    echo "<!-- polaris:start -->"
+    echo "## Polaris Skills"
+    echo ""
+    echo "> Auto-generated by Polaris (${descriptor}). Do not edit between these markers."
+    echo "> Files are relative to ${path_note}"
+    echo ""
+    echo "Read the relevant skill file when working on a related task."
+
+    if [[ -n "$stack_context" ]]; then
+        echo ""
+        echo "### Project Structure"
+        echo ""
+        echo "$stack_context"
+    fi
+
+    if [[ ${#_BLK_SKILLS[@]} -gt 0 ]]; then
+        echo ""
+        echo "**Skills:**"
+        for s in "${_BLK_SKILLS[@]}"; do
+            local title
+            title="$(_extract_title "$s")"
+            echo "- \`${s}\` — ${title}"
+        done
+    fi
+
+    if [[ ${#_BLK_AGENTS[@]} -gt 0 ]]; then
+        echo ""
+        echo "**Agents:**"
+        for a in "${_BLK_AGENTS[@]}"; do
+            local title
+            title="$(_extract_title "$a")"
+            echo "- \`${a}\` — ${title}"
+        done
+    fi
+
+    if [[ ${#_BLK_WORKFLOWS[@]} -gt 0 ]]; then
+        echo ""
+        echo "**Workflows:**"
+        for w in "${_BLK_WORKFLOWS[@]}"; do
+            local title
+            title="$(_extract_title "$w")"
+            echo "- \`${w}\` — ${title}"
+        done
+    fi
+
+    if [[ ${#_BLK_TEMPLATES[@]} -gt 0 ]]; then
+        echo ""
+        echo "**Templates:**"
+        for t in "${_BLK_TEMPLATES[@]}"; do
+            local title
+            title="$(_extract_title "$t")"
+            echo "- \`${t}\` — ${title}"
+        done
+    fi
+
+    if [[ ${#_BLK_COMMANDS[@]} -gt 0 ]]; then
+        echo ""
+        echo "**On-demand commands** (invoke as slash commands):"
+        for c in "${_BLK_COMMANDS[@]}"; do
+            echo "- \`/${c}\`"
+        done
+    fi
+
+    echo "<!-- polaris:end -->"
+}
+
+# Generate the marker-wrapped Polaris skills block from a single profile
 # Args: profile_name, path_note (e.g. "~/.claude/"), [extra1, extra2, ...]
 _generate_polaris_block() {
     local profile_name="$1"
@@ -309,96 +673,28 @@ _generate_polaris_block() {
     shift 2
     local extras=("$@")
 
-    local skills=() agents=() workflows=() templates=() commands=()
-
-    # Categorize profile entries
-    while IFS= read -r line; do
-        if [[ "$line" == cmd:* ]]; then
-            local cmd_part="${line#cmd:}"
-            local cmd_name="${cmd_part%%=*}"
-            commands+=("$cmd_name")
-        elif [[ "$line" == skills/* ]]; then
-            skills+=("$line")
-        elif [[ "$line" == agents/* ]]; then
-            agents+=("$line")
-        elif [[ "$line" == workflows/* ]]; then
-            workflows+=("$line")
-        elif [[ "$line" == templates/* ]]; then
-            templates+=("$line")
-        fi
-    done < <(read_profile "$profile_name")
-
-    # Categorize extras
-    for extra in "${extras[@]+"${extras[@]}"}"; do
-        if [[ "$extra" == skills/* ]]; then
-            skills+=("$extra")
-        elif [[ "$extra" == agents/* ]]; then
-            agents+=("$extra")
-        elif [[ "$extra" == workflows/* ]]; then
-            workflows+=("$extra")
-        elif [[ "$extra" == templates/* ]]; then
-            templates+=("$extra")
-        fi
-    done
-
-    # Build block
-    echo "<!-- polaris:start -->"
-    echo "## Polaris Skills"
-    echo ""
-    echo "> Auto-generated by Polaris (profile: ${profile_name}). Do not edit between these markers."
-    echo "> Files are relative to ${path_note}"
-    echo ""
-    echo "Read the relevant skill file when working on a related task."
-
-    if [[ ${#skills[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Skills:**"
-        for s in "${skills[@]}"; do
-            local title
-            title="$(_extract_title "$s")"
-            echo "- \`${s}\` — ${title}"
+    # Collect all lines (process substitution keeps _categorize_lines in current shell)
+    _categorize_lines < <(
+        read_profile "$profile_name"
+        for extra in "${extras[@]+"${extras[@]}"}"; do
+            echo "$extra"
         done
-    fi
+    )
 
-    if [[ ${#agents[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Agents:**"
-        for a in "${agents[@]}"; do
-            local title
-            title="$(_extract_title "$a")"
-            echo "- \`${a}\` — ${title}"
-        done
-    fi
+    _emit_polaris_block "profile: ${profile_name}" "$path_note"
+}
 
-    if [[ ${#workflows[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Workflows:**"
-        for w in "${workflows[@]}"; do
-            local title
-            title="$(_extract_title "$w")"
-            echo "- \`${w}\` — ${title}"
-        done
-    fi
+# Generate the marker-wrapped Polaris skills block from merged stack lines
+# Args: descriptor (e.g. "stacks: django + nextjs"), path_note, stack_context, merged_lines
+_generate_polaris_block_from_lines() {
+    local descriptor="$1"
+    local path_note="$2"
+    local stack_context="$3"
+    local merged_lines="$4"
 
-    if [[ ${#templates[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Templates:**"
-        for t in "${templates[@]}"; do
-            local title
-            title="$(_extract_title "$t")"
-            echo "- \`${t}\` — ${title}"
-        done
-    fi
+    _categorize_lines <<< "$merged_lines"
 
-    if [[ ${#commands[@]} -gt 0 ]]; then
-        echo ""
-        echo "**On-demand commands** (invoke as slash commands):"
-        for c in "${commands[@]}"; do
-            echo "- \`/${c}\`"
-        done
-    fi
-
-    echo "<!-- polaris:end -->"
+    _emit_polaris_block "$descriptor" "$path_note" "$stack_context"
 }
 
 # Update CLAUDE.md with the Polaris skills block
@@ -555,6 +851,220 @@ cmd_global() {
     ok "Global install complete"
 }
 
+# Resolve project directory from --target or git root
+_resolve_project_dir() {
+    local target="$1"
+    if [[ -n "$target" ]]; then
+        local resolved
+        resolved="$(cd "$target" 2>/dev/null && pwd || echo "$target")"
+        if [[ ! -d "$resolved" ]]; then
+            err "Target directory does not exist: $target"
+            exit 1
+        fi
+        echo "$resolved"
+    else
+        local git_root
+        git_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+        if [[ -z "$git_root" ]]; then
+            err "Not inside a git repo. Run from your project directory or use --target."
+            exit 1
+        fi
+        echo "$git_root"
+    fi
+}
+
+# Install extras into a claude dir
+_install_extras() {
+    local claude_dir="$1"
+    local dry_run="$2"
+    local force="$3"
+    shift 3
+    local extras=("$@")
+
+    if [[ ${#extras[@]} -gt 0 ]]; then
+        echo ""
+        info "Installing ${#extras[@]} extra skill(s)..."
+        for extra in "${extras[@]}"; do
+            if [[ ! -f "$SKILLS_REPO/$extra" ]]; then
+                err "  not found: $extra"
+                continue
+            fi
+            _install_line "$extra" "$claude_dir" "$dry_run" "$force"
+        done
+    fi
+}
+
+# Install stacks (composable mode)
+_install_stacks() {
+    local claude_dir="$1"
+    local dry_run="$2"
+    local force="$3"
+    local no_claude_md="$4"
+    shift 4
+    local extras=("$@")
+
+    # Build descriptor
+    local descriptor="stacks:"
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        if [[ $i -gt 0 ]]; then
+            descriptor+=" +"
+        fi
+        descriptor+=" ${STACK_NAMES[$i]}"
+    done
+
+    info "Installing ${descriptor} to $claude_dir/"
+
+    # Merge profiles and install
+    local merged
+    merged="$(_merge_profiles "${STACK_NAMES[@]}")"
+
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        _install_line "$line" "$claude_dir" "$dry_run" "$force"
+    done <<< "$merged"
+
+    # Install extras
+    _install_extras "$claude_dir" "$dry_run" "$force" "${extras[@]+"${extras[@]}"}"
+
+    # Generate CLAUDE.md
+    if [[ "$no_claude_md" != "true" ]]; then
+        local stack_context
+        stack_context="$(_generate_stack_context)"
+
+        local polaris_block
+        polaris_block="$(_generate_polaris_block_from_lines "$descriptor" ".claude/" "$stack_context" "$merged")"
+
+        echo ""
+        info "Updating CLAUDE.md..."
+        _apply_claude_md_amend "$claude_dir/CLAUDE.md" "$polaris_block" "$dry_run"
+    fi
+
+    echo ""
+    ok "Project install complete (${descriptor})"
+}
+
+# Install a single profile (legacy mode)
+_install_single_profile() {
+    local profile="$1"
+    local claude_dir="$2"
+    local dry_run="$3"
+    local force="$4"
+    local no_claude_md="$5"
+    shift 5
+    local extras=("$@")
+
+    info "Installing profile '$profile' to $claude_dir/"
+
+    while IFS= read -r line; do
+        _install_line "$line" "$claude_dir" "$dry_run" "$force"
+    done < <(read_profile "$profile")
+
+    # Install extras
+    _install_extras "$claude_dir" "$dry_run" "$force" "${extras[@]+"${extras[@]}"}"
+
+    # Generate CLAUDE.md
+    if [[ "$no_claude_md" != "true" ]]; then
+        _update_claude_md "$profile" "$claude_dir/CLAUDE.md" ".claude/" "false" "$dry_run" "${extras[@]+"${extras[@]}"}"
+    fi
+
+    echo ""
+    ok "Project install complete ($profile)"
+}
+
+cmd_new() {
+    ensure_init
+    local project_path="$1"
+    local dry_run="$2"
+    local force="$3"
+    local no_claude_md="$4"
+    shift 4
+    local extras=("$@")
+
+    if [[ -z "$project_path" ]]; then
+        err "Usage: polaris new <path>"
+        err "Example: polaris new ~/prj/my-app"
+        exit 1
+    fi
+
+    # Resolve to absolute path
+    if [[ "$project_path" != /* ]]; then
+        project_path="$(pwd)/$project_path"
+    fi
+
+    echo ""
+    echo -e "${BLUE}Polaris — New Project${NC}"
+    echo ""
+
+    # Create directory
+    if [[ -d "$project_path" ]]; then
+        warn "Directory already exists: $project_path"
+        # Check if it's empty (aside from hidden files like .git)
+        local file_count
+        file_count="$(find "$project_path" -maxdepth 1 -not -name '.*' -not -path "$project_path" | wc -l | tr -d ' ')"
+        if [[ "$file_count" -gt 0 ]]; then
+            warn "Directory is not empty — proceeding anyway"
+        fi
+    else
+        if [[ "$dry_run" == "true" ]]; then
+            echo "  would create: $project_path"
+        else
+            mkdir -p "$project_path"
+            ok "Created $project_path"
+        fi
+    fi
+
+    # Git init
+    if [[ -d "$project_path/.git" ]]; then
+        ok "Already a git repo"
+    elif [[ "$dry_run" == "true" ]]; then
+        echo "  would run: git init in $project_path"
+    else
+        git -C "$project_path" init -q
+        ok "Initialized git repo"
+    fi
+
+    # Stack selection — interactive if no --stack flags given
+    if [[ ${#STACK_NAMES[@]} -eq 0 ]]; then
+        _interactive_select
+    else
+        # Fill in default dirs for stacks without overrides
+        local i
+        for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+            if [[ -z "${STACK_DIRS[$i]}" ]]; then
+                _read_profile_metadata "$SKILLS_REPO/profiles/${STACK_NAMES[$i]}.txt"
+                STACK_DIRS[$i]="$_STACK_DIRECTORY"
+            fi
+        done
+    fi
+
+    # Create docs/design/ for design artifacts
+    if [[ "$dry_run" == "true" ]]; then
+        echo "  would create: $project_path/docs/design/"
+    else
+        mkdir -p "$project_path/docs/design"
+        ok "Created docs/design/ (drop wireframes, briefs, and flow diagrams here)"
+    fi
+
+    # Install stacks into project
+    local claude_dir="$project_path/.claude"
+    mkdir -p "$claude_dir"
+    _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
+
+    echo ""
+    ok "Project ready at $project_path"
+    echo ""
+    info "Next steps:"
+    echo "  cd $project_path"
+    echo ""
+    echo "  Option A — brainstorm from scratch:"
+    echo "    Open Claude Code and brainstorm your idea"
+    echo ""
+    echo "  Option B — bring existing design work:"
+    echo "    Drop briefs, wireframes, sitemaps into docs/design/"
+    echo "    Then open Claude Code and use the design-intake agent"
+}
+
 cmd_project() {
     ensure_init
     local profile="$1"
@@ -568,62 +1078,38 @@ cmd_project() {
 
     if [[ "$fresh" == "true" ]]; then
         warn "--fresh is only supported for 'polaris global'. Ignoring."
-        fresh="false"
     fi
 
-    if [[ -z "$profile" ]]; then
-        err "Specify a profile: ./install.sh project --profile <name>"
-        echo ""
-        cmd_list_profiles
+    # Validate: can't use both --profile and --stack
+    if [[ -n "$profile" && ${#STACK_NAMES[@]} -gt 0 ]]; then
+        err "Cannot use --profile and --stack together."
+        err "Use --stack for composable installs or --profile for legacy single-profile mode."
         exit 1
     fi
 
     local project_dir
-    if [[ -n "$target" ]]; then
-        # Resolve to absolute path
-        project_dir="$(cd "$target" 2>/dev/null && pwd || echo "$target")"
-        if [[ ! -d "$project_dir" ]]; then
-            err "Target directory does not exist: $target"
-            exit 1
-        fi
-    else
-        # Find project root (look for .git)
-        project_dir="$(git rev-parse --show-toplevel 2>/dev/null || true)"
-        if [[ -z "$project_dir" ]]; then
-            err "Not inside a git repo. Run from your project directory or use --target."
-            exit 1
-        fi
-    fi
-
+    project_dir="$(_resolve_project_dir "$target")"
     local claude_dir="$project_dir/.claude"
     mkdir -p "$claude_dir"
 
-    info "Installing profile '$profile' to $claude_dir/"
-
-    while IFS= read -r line; do
-        _install_line "$line" "$claude_dir" "$dry_run" "$force"
-    done < <(read_profile "$profile")
-
-    # Install extra skills
-    if [[ ${#extras[@]} -gt 0 ]]; then
-        echo ""
-        info "Installing ${#extras[@]} extra skill(s)..."
-        for extra in "${extras[@]}"; do
-            if [[ ! -f "$SKILLS_REPO/$extra" ]]; then
-                err "  not found: $extra"
-                continue
+    if [[ -n "$profile" ]]; then
+        # Legacy: single profile mode
+        _install_single_profile "$profile" "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
+    elif [[ ${#STACK_NAMES[@]} -gt 0 ]]; then
+        # Non-interactive stack mode — fill in default dirs for stacks without overrides
+        local i
+        for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+            if [[ -z "${STACK_DIRS[$i]}" ]]; then
+                _read_profile_metadata "$SKILLS_REPO/profiles/${STACK_NAMES[$i]}.txt"
+                STACK_DIRS[$i]="$_STACK_DIRECTORY"
             fi
-            _install_line "$extra" "$claude_dir" "$dry_run" "$force"
         done
+        _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
+    else
+        # Interactive mode
+        _interactive_select
+        _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
     fi
-
-    # Generate CLAUDE.md
-    if [[ "$no_claude_md" != "true" ]]; then
-        _update_claude_md "$profile" "$claude_dir/CLAUDE.md" ".claude/" "$fresh" "$dry_run" "${extras[@]+"${extras[@]}"}"
-    fi
-
-    echo ""
-    ok "Project install complete ($profile)"
 }
 
 cmd_status() {
@@ -735,14 +1221,20 @@ cmd_status() {
 }
 
 cmd_list_profiles() {
-    info "Available profiles:"
+    info "Available stacks (composable with --stack):"
     for f in "$SCRIPT_DIR"/profiles/*.txt; do
         [[ -f "$f" ]] || continue
+        [[ "$(basename "$f")" == _* ]] && continue
         local name
         name="$(basename "$f" .txt)"
         local count
         count="$(grep -cv '^\s*#\|^\s*$' "$f" 2>/dev/null || echo 0)"
-        echo "  $name ($count files)"
+        _read_profile_metadata "$f"
+        if [[ -n "$_STACK_TYPE" ]]; then
+            echo "  $name ($count files) [$_STACK_TYPE: $_STACK_LABEL]"
+        else
+            echo "  $name ($count files)"
+        fi
     done
 }
 
@@ -774,11 +1266,31 @@ FRESH="false"
 NO_CLAUDE_MD="false"
 PROFILE=""
 TARGET=""
+NEW_PATH=""
 EXTRAS=()
+STACK_NAMES=()
+STACK_DIRS=()
+
+# Grab positional argument for 'new' command (path before any flags)
+if [[ "$COMMAND" == "new" && $# -gt 0 && "${1:0:1}" != "-" ]]; then
+    NEW_PATH="$1"
+    shift
+fi
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --profile|-p)     PROFILE="$2"; shift 2 ;;
+        --stack|-s)
+            _stack_spec="$2"
+            _stack_name="${_stack_spec%%:*}"
+            STACK_NAMES+=("$_stack_name")
+            if [[ "$_stack_spec" == *:* ]]; then
+                STACK_DIRS+=("${_stack_spec#*:}")
+            else
+                STACK_DIRS+=("")
+            fi
+            shift 2
+            ;;
         --target|-t)      TARGET="$2"; shift 2 ;;
         --extra|-e)       EXTRAS+=("$2"); shift 2 ;;
         --dry-run|-n)     DRY_RUN="true"; shift ;;
@@ -792,6 +1304,7 @@ done
 case "$COMMAND" in
     init)           cmd_init ;;
     global)         cmd_global "$DRY_RUN" "$FORCE" "$FRESH" "$NO_CLAUDE_MD" ;;
+    new)            cmd_new "$NEW_PATH" "$DRY_RUN" "$FORCE" "$NO_CLAUDE_MD" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
     project)        cmd_project "$PROFILE" "$DRY_RUN" "$FORCE" "$TARGET" "$FRESH" "$NO_CLAUDE_MD" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
     status)         cmd_status ;;
     list-profiles)  cmd_list_profiles ;;

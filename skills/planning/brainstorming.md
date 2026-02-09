@@ -10,9 +10,15 @@ Start by understanding the current project context, then ask questions one at a 
 
 ## The Process
 
-**Understanding the idea:**
+**Understanding the context:**
 
-- Check out the current project state first (files, docs, recent commits if in a git repo)
+- Read CLAUDE.md (project-level, then global) to identify the stack(s) in use
+- If stack skills are referenced (e.g., `django-patterns.md`, `nextjs-patterns.md`, `flutter-patterns.md`), read them to understand tech constraints and conventions
+- Review any existing project files, docs, or recent commits
+- Treat the stack as a given — don't ask which framework or language to use when CLAUDE.md already specifies it
+
+**Refining the idea:**
+
 - Ask questions one at a time to refine the idea
 - Prefer multiple choice questions when possible, but open-ended is fine too
 - Only one question per message — if a topic needs more exploration, break it into multiple questions

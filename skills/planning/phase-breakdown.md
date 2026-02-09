@@ -54,6 +54,44 @@ feature/[plan-name]-phase-N
 - Put integration/glue work late
 - API contract definition should come before both backend implementation and frontend consumption
 
+### Parallel Phases
+
+Phases targeting different sub-projects with no cross-repo dependency can run in parallel.
+Use a parallel group notation to mark these:
+
+```markdown
+## Parallel Group A (Phases 1-2)
+
+### Phase 1: Backend — Models and API [server/]
+...
+
+### Phase 2: Frontend — Layout and Routing [web/]
+...
+
+## Sync Point: Integration Summary
+Backend generates integration summary → frontend consumes it
+
+## Parallel Group B (Phases 3-4)
+
+### Phase 3: Backend — Business Logic [server/]
+...
+
+### Phase 4: Frontend — API Integration [web/]
+Depends on: Integration summary from Phase 1
+...
+```
+
+**Rules for parallel phases:**
+- Phases in a parallel group target different sub-projects (different directories/repos)
+- No phase in a group may depend on another phase in the same group
+- Sync points between groups are where cross-repo handoff happens (integration summaries)
+- The `[directory/]` suffix on phase names makes the target sub-project explicit
+
+**When phases can NOT be parallel:**
+- Frontend phase consumes an API defined in a backend phase in the same group
+- Both phases modify shared configuration or documentation
+- One phase's output is another phase's input
+
 ### Cross-Repo Phases
 When a feature spans repos:
 1. Phase for backend API + integration summary generation

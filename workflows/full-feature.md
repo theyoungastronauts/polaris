@@ -40,6 +40,11 @@ Repeat for each phase:
 - If this phase produced API changes, generate the integration summary for frontend phases
 - Continue to the next phase
 
+**Autopilot (hands-off alternative):**
+- Start a Claude session in the sub-project
+- Run `/autopilot` — executes all phases: implement → test → verify → commit
+- Stops on FAIL — fix issues and run `/autopilot N` to resume
+
 ### 3. Execute — Ongoing Feature Work
 
 Once you have a working application and are building new features on top of it:

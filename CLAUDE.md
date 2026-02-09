@@ -15,7 +15,9 @@ skills/          Markdown instruction files Claude loads for guidance
 agents/          Role definitions (planner, executor, reviewer, integrator)
 workflows/       Multi-step orchestration docs
 templates/       Fillable templates (integration summaries)
-profiles/        .txt manifests listing which files to install per project type
+profiles/        .txt manifests + .claude.md snippets per stack
+  _multi-stack.txt  Auto-added items for multi-stack installs
+  *.claude.md       CLAUDE.md context snippets (one per stack, uses {directory} placeholder)
 install.sh       Copies files into ~/.claude/ (global) or .claude/ (project)
 context-pull.sh  Extracts Django backend context for frontend sessions
 ```
@@ -39,12 +41,18 @@ context-pull.sh  Extracts Django backend context for frontend sessions
 4. If adapted from external source, add to README.md attribution table
 5. Follow the patterns in `skills/meta/writing-skills.md` for structure guidance
 
-## Adding a new profile
+## Adding a new stack profile
 
-1. Create `profiles/<name>.txt`
+1. Create `profiles/<name>.txt` with metadata headers:
+   ```
+   # stack: backend|frontend
+   # label: Display Name
+   # directory: default-dir
+   ```
 2. List files (relative to repo root), one per line
 3. Comments with `#`, blank lines ignored
-4. Add to README.md profiles table
+4. Create a companion `profiles/<name>.claude.md` snippet with `{directory}` placeholder
+5. Add to README.md profiles table
 
 ## Shell scripts
 

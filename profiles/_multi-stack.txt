@@ -1,0 +1,6 @@
+# Items added automatically when multiple stacks are selected.
+# Internal — not a user-facing profile.
+
+skills/execution/cross-repo-context.md
+agents/integrator.md
+templates/integration-summary.md

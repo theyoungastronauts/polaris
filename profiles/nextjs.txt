@@ -1,3 +1,7 @@
+# stack: frontend
+# label: Next.js
+# directory: web
+#
 # Next.js frontend project skills
 
 skills/execution/nextjs-patterns.md

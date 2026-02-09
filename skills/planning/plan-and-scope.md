@@ -48,12 +48,21 @@ One paragraph describing the desired outcome.
 ## Phases
 (See phase-breakdown.md skill for detailed phase structure)
 
-### Phase 1: [Name]
+### Parallel Group A (Phases 1-2)
+
+#### Phase 1: [Backend — Name] [server/]
 - Objective:
 - Deliverables:
 - Estimated complexity: S/M/L
 
-### Phase 2: [Name]
+#### Phase 2: [Frontend — Name] [web/]
+- Objective:
+- Deliverables:
+- Estimated complexity: S/M/L
+
+### Sync Point: [e.g., Integration Summary]
+
+### Phase 3: [Name] [directory/]
 ...
 
 ## Repo Strategy

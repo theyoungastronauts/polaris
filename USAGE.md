@@ -27,12 +27,14 @@ After planning is done, use `/scaffold` to create sub-project repos as subdirect
 If you already know what you're building and have a repo ready:
 
 ```bash
-cd ~/prj/my-django-api
-polaris project --profile django-api
-# or: nextjs, flutter, fullstack
+cd ~/prj/my-app
+polaris project
+# Interactive: select backend (Django) + frontend (Next.js)
+# Or non-interactive:
+polaris project --stack django --stack nextjs
 ```
 
-This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). For example, the `nextjs` and `fullstack` profiles install `/react` and `/tailwind` as on-demand commands to keep context light.
+This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). Stacks are composable — select a backend and one or more frontends. The `nextjs` stack installs `/react` and `/tailwind` as on-demand commands to keep context light.
 
 Skip to Step 3 (Execute) if you already have a plan, or Step 1 if you want to brainstorm first.
 
@@ -136,14 +138,14 @@ Claude will follow the scaffold skill to:
 
 1. Read the plan and identify what sub-projects are needed
 2. Present a scaffold summary for your approval
-3. Create subdirectories (e.g., `~/prj/my-app/api/`, `~/prj/my-app/web/`)
-4. Git init each
+3. Create subdirectories (e.g., `~/prj/my-app/server/`, `~/prj/my-app/web/`)
+4. Git init the project
 5. Run the appropriate bootstrap commands (`/django-bootstrap`, `/nextjs-bootstrap`)
-6. Install Polaris profiles via `polaris project --profile X --target Y`
-7. Copy `plan.md` into each sub-project
+6. Install Polaris stacks via `polaris project --stack django:server --stack nextjs:web`
+7. `plan.md` stays at the project root
 8. Optionally generate a VS Code workspace file
 
-After scaffolding, each sub-project is an independent repo with its own `.claude/` skills installed.
+After scaffolding, the project has a single `.claude/` at the root with skills for all selected stacks.
 
 **Skip this step** if you used Path B (existing project) or already have your repos set up.
 
@@ -190,6 +192,24 @@ Claude will find the plan, ask which phase to execute, confirm, and start implem
 - Not committing frequently enough
 
 **After execution completes,** Claude will summarize what was done, list commits, flag any deviations, and suggest running `/verify` in a new session.
+
+### Alternative: Autopilot (hands-off)
+
+Instead of manually running `/execute` and `/verify` per phase, use `/autopilot` to loop through all phases automatically:
+
+```
+You: /autopilot
+```
+
+Autopilot spawns an executor and reviewer as teammates and orchestrates the full cycle for each phase: implement → lint/test → verify → commit. It stops immediately on a FAIL verdict so you can intervene.
+
+To resume from a specific phase after fixing issues:
+
+```
+You: /autopilot 3
+```
+
+See `workflows/full-feature.md` for where this fits in the overall workflow.
 
 ---
 
@@ -334,6 +354,7 @@ git worktree add ../api-billing -b feature/billing
 | 2b | Scaffold (new projects) | Root folder | `/scaffold` command |
 | 3 | Execute | Sub-project (on main) | `/execute` command |
 | 4 | Verify | Sub-project (new session) | `/verify` command |
+| 3-5 | Autopilot (alternative) | Sub-project | `/autopilot` command (hands-off loop) |
 | 5 | Next phase | Sub-project | Repeat from 3 |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
 | — | Ongoing: single feature | Any repo | Branch → execute → review → PR |

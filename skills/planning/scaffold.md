@@ -1,27 +1,28 @@
-# Scaffold: Plan to Projects
+# Scaffold: Design to Projects
 
 ## When to Use
 
-After planning is complete in a root project folder and you need to create sub-projects
-as separate repos (e.g., API backend + web frontend).
+After brainstorming is complete and you have a design doc. Scaffold creates the project
+structure so the planner has real directories, installed packages, and boilerplate to
+reference when building the implementation plan.
 
 ## Prerequisites
 
-- A finalized `plan.md` (or `docs/plans/*.md`) exists and has been reviewed
-- You know what sub-projects are needed and what stack each uses
+- A brainstorm/design doc exists (`docs/plans/*.md`)
+- Stack context is already in CLAUDE.md (set up by `polaris new`)
 
 ## Process
 
-### 1. Identify Sub-Projects from the Plan
+### 1. Identify Sub-Projects from the Design
 
-Read the plan and map each sub-project to a Polaris profile and bootstrap command:
+Read CLAUDE.md for the selected stacks and the design doc for what's being built.
+Map each sub-project to a bootstrap command:
 
-| Sub-project type | Profile | Bootstrap command |
-|------------------|---------|-------------------|
-| Django/DRF API | `django-api` | `/django-bootstrap` |
-| Next.js frontend | `nextjs` | `/nextjs-bootstrap` |
-| Flutter app | `flutter` | (manual setup) |
-| Fullstack (mono) | `fullstack` | both bootstrap commands |
+| Sub-project type | Stack flag | Bootstrap command |
+|------------------|------------|-------------------|
+| Django/DRF API | `--stack django` | `/django-bootstrap` |
+| Next.js frontend | `--stack nextjs` | `/nextjs-bootstrap` |
+| Flutter app | `--stack flutter` | (manual setup) |
 
 ### 2. Confirm with the User
 
@@ -30,19 +31,19 @@ Present the scaffold plan before creating anything:
 ```
 Scaffold Plan:
   Root: ~/prj/my-app/
-  Sub-projects:
-    1. ~/prj/my-app/api/   (django-api profile)
-    2. ~/prj/my-app/web/   (nextjs profile)
+  Stacks (from CLAUDE.md):
+    - Backend: Django → server/
+    - Frontend: Next.js → web/
 
   Will create:
     - Subdirectories within the current project
-    - git init each
+    - git init each sub-project
     - Run bootstrap commands
-    - Install Polaris profiles
-    - Generate VS Code workspace file
+
+  Parallel bootstrap: Yes (2 sub-projects, no shared code)
 ```
 
-Let the user adjust names, add/remove sub-projects, or change profiles before proceeding.
+Let the user adjust names, add/remove stacks, or change directories before proceeding.
 
 ### 3. Create and Initialize
 
@@ -58,37 +59,36 @@ Naming convention: `{suffix}` = role (`api`, `web`, `mobile`, `admin`) as a subd
 
 ### 4. Run Bootstrap Commands
 
-For each sub-project with a bootstrap command:
+When there are multiple sub-projects, bootstrap them in parallel using a team.
+Sub-projects have no shared code at this stage, so there are no conflicts.
+
+**Parallel bootstrap (2+ sub-projects):**
+
+1. Create a team named "scaffold" using TeamCreate
+2. Spawn one agent per sub-project using the Task tool with `team_name: "scaffold"`:
+
+   For each sub-project, spawn a general-purpose agent with:
+   > You are bootstrapping the {label} sub-project at {root}/{suffix}/.
+   > Read the design doc at docs/plans/*.md for project context.
+   > Run the bootstrap command: {bootstrap_command}
+   > Use the design doc to suggest sensible placeholder values (project name, app names, etc.).
+   > After bootstrap completes, run: git add . && git commit -m "chore: initial {label} scaffold"
+   > Report back what was created.
+
+3. Wait for all agents to complete
+4. Send shutdown requests and delete the team
+
+**Single sub-project (no team needed):**
 
 1. Change into the sub-project directory
 2. Invoke the bootstrap command (`/django-bootstrap` or `/nextjs-bootstrap`)
-3. Use plan context to suggest sensible placeholder values
+3. Use design doc context to suggest sensible placeholder values
 4. After bootstrap completes, make an initial commit:
    ```bash
    git add . && git commit -m "chore: initial project scaffold"
    ```
 
-### 5. Install Polaris Profiles
-
-```bash
-polaris project --profile {profile} --target {root}/{suffix}
-```
-
-### 6. Copy Plan to Sub-Projects
-
-Each sub-project needs plan context for the executor agent:
-
-```bash
-cp {root}/plan.md {root}/{suffix}/plan.md
-```
-
-Or reference it from each sub-project's `CLAUDE.md`:
-```markdown
-## Plan
-See ../plan.md for the implementation plan.
-```
-
-### 7. Generate VS Code Workspace (Optional)
+### 5. Generate VS Code Workspace (Optional)
 
 ```json
 {
@@ -102,37 +102,31 @@ See ../plan.md for the implementation plan.
 
 Save as `{root}/{root-name}.code-workspace`.
 
-### 8. Report Summary
+### 6. Report Summary
 
 ```
 Scaffold complete:
-  ~/prj/my-app/          (planning root)
-  ~/prj/my-app/api/      (django-api) -- ready
-  ~/prj/my-app/web/      (nextjs) -- ready
+  ~/prj/my-app/              (project root)
+  ~/prj/my-app/server/       (Django backend) -- ready
+  ~/prj/my-app/web/          (Next.js frontend) -- ready
   ~/prj/my-app/my-app.code-workspace
 ```
 
-Then present the next steps, filled in with the actual project names, phases, and profiles:
+Then suggest the next step:
 
 ```
-What to do next — one phase at a time:
+Project is scaffolded. Next:
 
-1. Open a Claude session in the first sub-project (e.g. api/)
-2. Tell it: "Execute phase 1 of the plan"
-   - The executor agent reads plan.md, implements, and commits on main
-3. When phase 1 is done, start a NEW Claude session in the same directory
-4. Tell it: "Review phase 1 against the plan"
-   - The reviewer agent checks the work and produces a verification report
-5. Fix any issues, then move on to phase 2
-
-Work directly on main during the initial build — there's nothing to
-protect yet. Commits between phases give you natural review points.
+1. Start a NEW Claude session in this directory
+2. Tell it: "Turn the design into a phased implementation plan"
+   - The planner can now reference real project files and structure
+3. Review the plan, then execute phase by phase
 ```
 
 ## Key Principles
 
 - **Confirm before creating** -- always show the plan and get user approval first
-- **Subdirectories, separate repos** -- sub-projects live inside the root as subdirectories
-- **One profile per sub-project** -- each gets exactly one stack profile
-- **Plan travels with the project** -- copy plan.md so executor sessions have context
+- **Monorepo with subdirectories** -- stacks live as subdirectories in a single repo
+- **Scaffold before planning** -- real project structure makes plans more concrete
+- **Parallel when possible** -- bootstrap sub-projects concurrently using teams
 - **Bootstrap commands do the heavy lifting** -- this skill orchestrates; the bootstrap commands handle details

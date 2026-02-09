@@ -1,3 +1,7 @@
+# stack: frontend
+# label: Flutter
+# directory: mobile
+#
 # Flutter app project skills
 
 skills/execution/flutter-patterns.md

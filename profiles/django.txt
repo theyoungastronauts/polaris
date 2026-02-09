@@ -1,10 +1,11 @@
+# stack: backend
+# label: Django
+# directory: server
+#
 # Django API project skills
 
 skills/execution/django-patterns.md
-
-# On-demand bootstrap guide (invoke with /django-bootstrap)
 cmd:django-bootstrap=skills/execution/django-bootstrap.md
-
 skills/verification/verify-django.md
 agents/executor.md
 templates/integration-summary.md

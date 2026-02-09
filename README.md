@@ -23,15 +23,18 @@ polaris global --fresh
 After init, use the `polaris` alias for all commands:
 
 ```bash
-# Install stack-specific skills in a project
-cd ~/prj/my-django-api
-polaris project --profile django-api
+# Install stack-specific skills in a project (interactive)
+cd ~/prj/my-app
+polaris project
 
-# Install into a specific directory (doesn't need to be a git repo yet)
-polaris project --profile nextjs --target ~/prj/my-app-web
+# Or specify stacks directly
+polaris project --stack django --stack nextjs
 
-# Add project-specific extras not in any profile
-polaris project --profile django-api --extra skills/misc/vfx.md
+# Override default directories
+polaris project --stack django:api --stack nextjs:client
+
+# Add project-specific extras
+polaris project --stack django --extra skills/misc/vfx.md
 
 # Check what's installed and if updates are available
 polaris status
@@ -62,10 +65,10 @@ polaris/
 │   └── integration-summary.md
 └── profiles/
     ├── global.txt          # Skills for ~/.claude/
-    ├── django-api.txt
-    ├── nextjs.txt
-    ├── flutter.txt
-    └── fullstack.txt
+    ├── django.txt          # Backend stack (+ django.claude.md snippet)
+    ├── nextjs.txt          # Frontend stack (+ nextjs.claude.md snippet)
+    ├── flutter.txt         # Frontend stack (+ flutter.claude.md snippet)
+    └── _multi-stack.txt    # Auto-added for multi-stack installs
 ```
 
 ## External Skills
@@ -82,13 +85,14 @@ Some skills are adapted from popular open-source skill repos:
 
 ## Profiles
 
-| Profile | Use Case |
-|---------|----------|
-| `global` | Installed to ~/.claude/, available everywhere |
-| `django-api` | Django/DRF backend projects |
-| `nextjs` | Next.js frontend projects |
-| `flutter` | Flutter mobile/web app projects |
-| `fullstack` | Projects spanning backend + frontend |
+Stacks are composable — select a backend and one or more frontends during `polaris project`.
+
+| Profile | Type | Use Case |
+|---------|------|----------|
+| `global` | — | Installed to ~/.claude/, available everywhere |
+| `django` | backend | Django/DRF backend |
+| `nextjs` | frontend | Next.js frontend |
+| `flutter` | frontend | Flutter mobile/web app |
 
 ## On-Demand Commands
 
@@ -98,11 +102,12 @@ Some heavy reference docs are installed as slash commands instead of always-load
 |---------|------|----------|
 | `/execute` | Execute a phase of the plan | global |
 | `/verify` | Verify a completed phase against the plan | global |
-| `/scaffold` | Create sub-project repos from a plan (git init, bootstrap, install profiles) | global, fullstack |
-| `/react` | React best practices (57 rules) | nextjs, fullstack |
-| `/tailwind` | Tailwind v4 design system | nextjs, fullstack |
-| `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django-api, fullstack |
-| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs, fullstack |
+| `/autopilot` | Autonomous phase execution (execute → test → verify → commit loop) | global |
+| `/scaffold` | Create project from a plan (git init, bootstrap, install stacks) | global |
+| `/react` | React best practices (57 rules) | nextjs |
+| `/tailwind` | Tailwind v4 design system | nextjs |
+| `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
+| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
 
 Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of the default location:
 
@@ -125,6 +130,8 @@ See [USAGE.md](USAGE.md) for the complete walkthrough, or [QUICKSTART.md](QUICKS
 4. **Execute** — Implement each phase on main with the executor agent
 5. **Review** — Verify each phase with the reviewer agent
 6. **Repeat** — Move through phases until the MVP is complete
+
+Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases automatically and stops on failure.
 
 **Ongoing development:**
 
@@ -161,7 +168,7 @@ polaris status
 Update with:
 ```bash
 polaris global --force
-polaris project --profile django-api --force
+polaris project --stack django --stack nextjs --force
 ```
 
 ## Customization

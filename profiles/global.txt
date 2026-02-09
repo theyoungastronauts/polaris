@@ -10,6 +10,7 @@ cmd:scaffold=skills/planning/scaffold.md
 # Execution & verification (on-demand)
 cmd:execute=skills/execution/execute-phase.md
 cmd:verify=skills/verification/verify-phase.md
+cmd:autopilot=skills/execution/autopilot.md
 
 # Writing
 skills/writing/writing-clearly.md
@@ -23,4 +24,5 @@ skills/git/worktrees.md
 
 # Agents
 agents/planner.md
+agents/design-intake.md
 agents/reviewer.md
