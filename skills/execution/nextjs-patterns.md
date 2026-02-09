@@ -42,6 +42,12 @@ Guide Claude Code when implementing Next.js features. Projects use one of two mo
 - Constants: `UPPER_SNAKE_CASE`
 - Directories: kebab-case for routes, camelCase for lib
 
+## Development Environment
+- All commands run via `make` (Docker Compose under the hood) — never run `npm` directly on the host
+- Use `/nextjs-bootstrap` when setting up a new project from scratch
+- Hot reload works inside Docker via `WATCHPACK_POLLING=true`
+- `node_modules` lives inside the container (anonymous volume) — do not install on host
+
 ---
 
 ## Frontend-Centric Mode

@@ -15,6 +15,10 @@ Ask the user for these values (provide defaults where shown):
 | `{project_prefix}` | Short cache key prefix | `myserv` |
 | `{heroku-app-name}` | Heroku app name (if deploying) | `my-service-prod` |
 
+> **MANDATORY: This project runs entirely in Docker.**
+> Every Docker file below (Dockerfile.dev, docker-compose.yml, Makefile, docker/ scripts) MUST be generated.
+> The Makefile is the sole interface — never run `python manage.py` directly on the host.
+
 ## Bootstrapping Steps
 
 1. Create `{service_name}/` directory and all subdirectories
@@ -957,7 +961,7 @@ urlpatterns = []
 
 ---
 
-## Docker
+## Docker (REQUIRED — do not skip)
 
 ### docker-compose.yml
 
@@ -1100,7 +1104,7 @@ exec $cmd
 
 ---
 
-## Makefile
+## Makefile (REQUIRED — do not skip)
 
 ```makefile
 # {project-name} - Makefile
@@ -1756,11 +1760,12 @@ Add `stripe` to `requirements.txt`.
 1. Create service directory, init git
 2. Generate all files from templates above, replacing placeholders
 3. Copy `.env.example` to `.env`
-4. `make build && make up`
-5. `make migrate`
-6. `make createsuperuser`
-7. Verify admin at `http://localhost:{host_port}/admin/`
-8. Add first app: `make manage startapp {app_name}`
-9. Add app to `LOCAL_APPS` in `settings/apps.py`
-10. Create models inheriting `AbstractModel`
-11. `make makemigrations && make migrate`
+4. Verify Docker files exist: `Dockerfile.dev`, `docker-compose.yml`, `Makefile`, `docker/entrypoint.sh`, `docker/wait-for-it.sh`
+5. `make build && make up`
+6. `make migrate`
+7. `make createsuperuser`
+8. Verify admin at `http://localhost:{host_port}/admin/`
+9. Add first app: `make manage startapp {app_name}`
+10. Add app to `LOCAL_APPS` in `settings/apps.py`
+11. Create models inheriting `AbstractModel`
+12. `make makemigrations && make migrate`

@@ -54,5 +54,11 @@ Systematic verification checklist for Next.js/React code. Used by the reviewer a
 - [ ] ESLint passes
 - [ ] Consistent naming conventions
 
+### 9. Development Environment
+- [ ] `Dockerfile.dev` exists and uses `node:20-alpine`
+- [ ] `docker-compose.yml` exists with volume mounts and `WATCHPACK_POLLING`
+- [ ] `Makefile` exists and wraps all commands via `docker compose exec`
+- [ ] No `npm run` / `npx` commands used directly on host
+
 ## Output
 Produce a `verification-report.md` (same format as verify-django).

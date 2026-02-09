@@ -63,6 +63,8 @@ Django bootstrap values:
 
 Next.js bootstrap values:
 - App name (e.g., `my-app`)
+- Docker Compose project name (kebab-case, e.g., `my-app-web`)
+- Host port (default: `3000`)
 - Backend API port (default: `8000` — match the Django port above)
 - Production domain (e.g., `myapp.com`)
 - App display title (e.g., `My App`)
@@ -84,6 +86,8 @@ Bootstrap Configuration:
 
   Next.js (web/):
     App name:        my-app
+    Compose project: my-app-web
+    Host port:       3000
     API port:        8000            (matches Django above)
     Domain:          myapp.com
     Display title:   My App

@@ -1,6 +1,10 @@
 # Next.js Bootstrap
 
-On-demand command for scaffolding a new Next.js application with App Router, DaisyUI, Tailwind v4, and standard conventions.
+On-demand command for scaffolding a new Next.js application with Docker, App Router, DaisyUI, Tailwind v4, and standard conventions.
+
+> **MANDATORY: This project runs entirely in Docker.**
+> Every Docker file below (Dockerfile.dev, docker-compose.yml, Makefile) MUST be generated.
+> The Makefile is the sole interface — never run `npm` directly on the host.
 
 ## Before You Start
 
@@ -9,6 +13,8 @@ Ask the user for these values:
 | Placeholder | Description | Example |
 |-------------|-------------|---------|
 | `{app-name}` | Project/directory name | `my-app` |
+| `{compose-project}` | Docker Compose project name (kebab-case) | `my-app-web` |
+| `{host_port}` | Host port for Next.js (default: `3000`) | `3001` |
 | `{api-port}` | Backend API port (default: `8002`) | `8002` |
 | `{domain}` | Production domain | `myapp.com` |
 | `{app-title}` | Display name for metadata | `My App` |
@@ -71,7 +77,10 @@ Ask the user for these values:
 ├── postcss.config.mjs
 ├── .nvmrc
 ├── .env.local
-└── .gitignore
+├── .gitignore
+├── Dockerfile.dev
+├── docker-compose.yml
+└── Makefile
 ```
 
 ---
@@ -243,6 +252,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# docker
+docker-compose.override.yml
 ```
 
 ### .husky/pre-commit
@@ -1228,14 +1240,150 @@ import Image from 'next/image';
 
 ---
 
+## Docker (REQUIRED — do not skip)
+
+### Dockerfile.dev
+
+```dockerfile
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies first for layer caching
+COPY package.json package-lock.json* ./
+RUN npm install
+
+# Copy application code
+COPY . .
+
+EXPOSE 3000
+
+ENV HOSTNAME=0.0.0.0
+CMD ["npm", "run", "dev"]
+```
+
+### docker-compose.yml
+
+```yaml
+name: {compose-project}
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    ports:
+      - "{host_port}:3000"
+    env_file:
+      - .env.local
+    environment:
+      - WATCHPACK_POLLING=true
+```
+
+Key details:
+- Anonymous volumes for `node_modules` and `.next` prevent host overwriting container installs
+- `WATCHPACK_POLLING=true` enables hot reload inside Docker (required on macOS with bind mounts)
+- Container always listens on port 3000; `{host_port}` maps the host side
+
+### Makefile
+
+```makefile
+# {compose-project} - Makefile
+PROJECT_NAME = {compose-project}
+DOCKER_COMPOSE = docker compose --project-name $(PROJECT_NAME)
+
+# ============================================================================
+# Docker
+# ============================================================================
+
+.PHONY: build up down restart stop ps logs bash wipe
+
+build:
+	$(DOCKER_COMPOSE) build
+
+up:
+	$(DOCKER_COMPOSE) up --detach
+
+down:
+	$(DOCKER_COMPOSE) down
+
+restart: down up
+
+stop:
+	$(DOCKER_COMPOSE) stop
+
+ps:
+	$(DOCKER_COMPOSE) ps
+
+logs:
+	$(DOCKER_COMPOSE) logs -f web
+
+bash:
+	$(DOCKER_COMPOSE) exec web sh
+
+wipe:
+	@echo "WARNING: This will delete all containers and volumes!"
+	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ]
+	$(DOCKER_COMPOSE) down -v --remove-orphans
+
+# ============================================================================
+# Development
+# ============================================================================
+
+.PHONY: dev lint lint-fix typecheck
+
+dev: up logs
+
+lint:
+	$(DOCKER_COMPOSE) exec web npm run lint
+
+lint-fix:
+	$(DOCKER_COMPOSE) exec web npm run lint:fix
+
+typecheck:
+	$(DOCKER_COMPOSE) exec web npm run typecheck
+
+# ============================================================================
+# Dependencies
+# ============================================================================
+
+.PHONY: install add
+
+install:
+	$(DOCKER_COMPOSE) exec web npm install
+
+add:
+	$(DOCKER_COMPOSE) exec web npm install $(filter-out $@,$(MAKECMDGOALS))
+
+# ============================================================================
+# Build
+# ============================================================================
+
+.PHONY: build-next
+
+build-next:
+	$(DOCKER_COMPOSE) exec web npm run build
+
+# Catch-all for npm commands
+%:
+	@:
+```
+
+---
+
 ## Post-Bootstrap Checklist
 
 1. Create project directory
 2. Generate all files from templates above (replace placeholders)
-3. `npm install`
-4. `npm run dev`
-5. Verify page loads at `http://localhost:3000`
-6. `npm run lint` — should pass cleanly
-7. `npm run typecheck` — should pass cleanly
-8. For frontend-centric: verify login page renders at `/login`
-9. Commit initial scaffold
+3. Verify Docker files exist: `Dockerfile.dev`, `docker-compose.yml`, `Makefile`
+4. Copy `.env.local` from template above
+5. `make build && make up`
+6. Verify page loads at `http://localhost:{host_port}`
+7. `make lint` — should pass cleanly
+8. `make typecheck` — should pass cleanly
+9. For frontend-centric: verify login page renders at `/login`
+10. Commit initial scaffold

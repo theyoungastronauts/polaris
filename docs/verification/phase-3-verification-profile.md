@@ -110,6 +110,31 @@ Key pattern consistency verified:
 
 ---
 
+## Additional Checks
+
+### Bootstrap as `cmd:` entry — Correct
+
+The bootstrap is registered as `cmd:flutter-bootstrap=skills/execution/flutter-bootstrap.md`, which installs it as an on-demand `/flutter-bootstrap` command rather than an always-loaded skill. This is the right call for three reasons:
+
+1. **Size:** At 32,384 bytes (1,249 lines), loading it into every session would waste significant tokens
+2. **Usage pattern:** Bootstrap runs once per project, not during ongoing feature work
+3. **Precedent:** This matches the CLAUDE.md convention — "Heavy reference docs should use `cmd:` in profiles to install as on-demand slash commands instead of always-loaded skills"
+4. **Consistency:** The Django profile handles `django-bootstrap.md` the same way
+
+### Patterns coverage completeness — Nothing missing
+
+Cross-checked every convention bullet and code pattern in `flutter-patterns.md` against `verify-flutter.md`. All key patterns have corresponding checks. Specifically confirmed:
+
+- `save()` combining create + update via `model.exists` — Services section, line 31
+- `AsyncValue.guard()` wrapping async calls — Providers section, line 41
+- `ref.invalidate()` after mutations — Providers section, line 42
+- `context.mounted` check after async — Screens section, line 50
+- `ConsumerWidget` only when widget needs ref — Widgets section, line 57
+- `kDebugMode` gating on logging — API Client section, line 67
+- `ValidationFailure.fieldErrors` map — Error Handling section, line 82
+
+---
+
 ## Warnings
 
 None.

@@ -18,13 +18,21 @@ Note: `10.0.2.2` is the Android emulator alias for the host machine's localhost.
 
 ## Bootstrapping Steps
 
-1. Run `flutter create --org {org} --platforms {platforms} {app_name}`
-2. `cd {app_name}` and replace the generated `lib/`, `pubspec.yaml`, `analysis_options.yaml`
-3. Create `build.yaml` for Freezed/Riverpod codegen
-4. Generate all files from templates below
-5. Run `flutter pub get`
-6. Run `dart run build_runner build --delete-conflicting-outputs`
-7. Run `flutter run`
+1. Check if puro is installed (`which puro`). If not, install it:
+   ```bash
+   curl -o- https://puro.dev/install.sh | bash
+   ```
+2. Create a puro environment for this project: `puro create {app_name} stable`
+3. Run `puro -e {app_name} flutter create --org {org} --platforms {platforms} {app_name}`
+4. `cd {app_name}` and pin the environment: `puro use {app_name}`
+5. Replace the generated `lib/`, `pubspec.yaml`, `analysis_options.yaml`
+6. Create `build.yaml` for Freezed/Riverpod codegen
+7. Generate all files from templates below
+8. Run `flutter pub get`
+9. Run `dart run build_runner build --delete-conflicting-outputs`
+10. Run `flutter run`
+
+> **Note:** [puro](https://puro.dev/) manages per-project Flutter versions. The `puro use` command writes a `.purorc` file that pins this project to its environment. All `flutter` and `dart` commands automatically use the correct version when run from the project directory.
 
 ---
 

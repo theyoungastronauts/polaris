@@ -52,6 +52,12 @@ Run through each section. Flag issues as PASS, WARN, or FAIL.
 - [ ] Linting passes (ruff/flake8)
 - [ ] Type hints on function signatures
 
+### 8. Development Environment
+- [ ] `Dockerfile.dev` exists
+- [ ] `docker-compose.yml` exists with all required services (web, db, redis, celery, celery-beat)
+- [ ] `Makefile` exists and wraps all commands via `docker compose exec`
+- [ ] No `python manage.py` commands used directly on host
+
 ## Output
 Produce a `verification-report.md`:
 ```markdown
