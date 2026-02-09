@@ -13,6 +13,24 @@ With Polaris and Claude Code, the generation engine shifts from templates to AI.
 
 This brainstorm defines how to bring Houston's best patterns into Polaris as a Flutter stack profile.
 
+### Source Reference: Houston Repository
+
+The Houston project lives at `/Users/tyler/prj/houston`. Key paths for the planner/executor to reference:
+
+| What | Path |
+|------|------|
+| **Full project review** | `houston/REVIEW.md` — comprehensive audit covering architecture, code quality, security, and AI integration analysis |
+| **Flutter app source** | `houston/houston_flutter/lib/` — clean architecture implementation with features (auth, profile, asset) |
+| **Feature structure example** | `houston/houston_flutter/lib/features/profile/` — most complete feature (data/domain/presentation layers, all three backend datasources) |
+| **Auth implementation** | `houston/houston_flutter/lib/features/auth/` — JWT auth with login, register, session management |
+| **Core infrastructure** | `houston/houston_flutter/lib/core/` — Dio client, router, theme, error handling, providers, widgets |
+| **Mason brick templates** | `houston/houston_cli/bricks/flutter_feature/` — shows the generated file structure per feature (reference for patterns, not to be ported) |
+| **Blueprint examples** | `houston/houston_cli/blueprints/` — YAML entity definitions (reference for what features look like declaratively) |
+| **Django backend** | `houston/houston_django/` — Django REST API (auth, models, serializers, views) |
+| **Existing Flutter patterns skill** | `polaris/skills/execution/flutter-patterns.md` — current lightweight version to be replaced |
+
+When writing the Flutter patterns skill, read the Houston source files directly to extract the proven conventions and translate them into modernized guidance.
+
 ---
 
 ## Decisions Made
