@@ -8,3 +8,6 @@ skills/execution/flutter-patterns.md
 skills/verification/verify-flutter.md
 skills/execution/cross-repo-context.md
 agents/executor.md
+
+# On-demand reference docs (invoke with /flutter-bootstrap)
+cmd:flutter-bootstrap=skills/execution/flutter-bootstrap.md

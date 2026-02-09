@@ -107,6 +107,36 @@ Matches the patterns skill's service interface convention exactly.
 
 The auth forms use `ConsumerStatefulWidget` with local `_loading`/`_error` state instead of the patterns.md approach of putting controllers on an `AsyncNotifier`. This is a deliberate and valid choice: the auth provider manages `AsyncValue<User?>`, not a form model, so a form-model-based notifier pattern doesn't apply cleanly. The patterns skill's form approach is for CRUD features, not auth. Not an inconsistency.
 
+### Auth flow completeness — PASS
+
+The full auth lifecycle is covered:
+
+| Step | Implementation |
+|---|---|
+| **Login** | `AuthServiceDjango.login()` (line 718) — posts credentials to `/auth/token/`, stores token, fetches user |
+| **Register** | `AuthServiceDjango.register()` (line 736) — posts to `/auth/register/`, then auto-logs in |
+| **Token storage** | `Session.setToken()` (line 544) — writes access + refresh to `flutter_secure_storage` |
+| **Token restore** | `Session.initialize()` (line 535) — reads from secure storage on app launch |
+| **Token refresh** | `DioClient._authInterceptor()` (line 317) — detects expired access, refreshes via `/auth/token/refresh/`, handles refresh failure |
+| **Auth guard** | `app_router.dart` (line 447) — redirects unauthenticated users to login, authenticated users away from auth routes |
+| **Logout** | `Auth.logout()` (line 845) — calls service, clears session tokens, sets auth state to null |
+| **401 handling** | `DioClient._authInterceptor.onError` (line 339) — clears token on 401 response |
+
+### Pubspec dependencies — PASS
+
+All dependencies use `^` ranges as the plan specified. Dependencies are well-organized with section comments. All required packages are present:
+
+- **State management:** `flutter_riverpod` + `riverpod_annotation` (runtime), `riverpod_generator` (dev)
+- **Routing:** `go_router`
+- **Networking:** `dio`
+- **Models:** `freezed_annotation` + `json_annotation` (runtime), `freezed` + `json_serializable` (dev)
+- **Auth:** `flutter_secure_storage` + `jwt_decoder`
+- **Codegen:** `build_runner` (dev)
+- **Testing:** `mocktail` (dev)
+- **Linting:** `flutter_lints` (dev)
+
+No unnecessary packages. No pinned versions (all use `^`). SDK constraint `^3.6.0` is appropriate for Dart 3 sealed class support.
+
 ---
 
 ## Warnings
