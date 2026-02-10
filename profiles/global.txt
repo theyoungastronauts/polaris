@@ -15,8 +15,9 @@ cmd:autopilot=skills/execution/autopilot.md
 # Writing
 skills/writing/writing-clearly.md
 
-# Meta (for authoring new skills)
+# Meta
 skills/meta/writing-skills.md
+cmd:reflect=skills/meta/reflect.md
 
 # Git
 skills/git/commit-conventions.md

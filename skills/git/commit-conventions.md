@@ -45,3 +45,12 @@ How this was tested.
 ## Integration Notes
 Any cross-repo impacts or integration summary updates.
 ```
+
+## Multi-Repo Projects
+
+When the project uses separate git repos per stack (e.g., `server/` and `web/` are each their own repo):
+
+- **Check which repo you're in** before committing: `git -C <dir> rev-parse --show-toplevel`
+- **Commit from within the stack directory**: `git -C server add . && git -C server commit -m "..."`
+- **Never combine changes across repos** in a single commit — they are independent histories
+- **If a phase touched multiple repos** (it shouldn't), make separate commits in each

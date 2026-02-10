@@ -33,6 +33,7 @@ Commands:
   global                Install global skills to ~/.claude/
   new <path>            Create a new project with stack context (for brainstorming)
   project               Install skills into a project's .claude/ (interactive stack selection)
+  uninstall             Remove Polaris from a project (preserves user content)
   status                Show what's installed and if anything is stale
   list-profiles         List available profiles and stacks
   list-skills           List all available skills and agents
@@ -45,7 +46,8 @@ Options:
   --extra, -e PATH      Additional skill to install (can be repeated)
   --dry-run, -n         Show what would be copied without copying
   --force, -f           Overwrite local modifications
-  --fresh               Replace CLAUDE.md with defaults template + skills (global only)
+  --fresh               Replace CLAUDE.md with defaults template + skills
+  --clean               Remove existing Polaris files before reinstalling
   --no-claude-md        Skip CLAUDE.md generation
 
 Examples:
@@ -57,7 +59,11 @@ Examples:
   ./install.sh project                                  # interactive stack selection
   ./install.sh project --stack django --stack nextjs     # non-interactive
   ./install.sh project --stack django:api --stack nextjs:client
+  ./install.sh project --clean --stack django --stack nextjs  # wipe and reinstall
+  ./install.sh project --clean --fresh --stack django         # wipe and fresh CLAUDE.md
   ./install.sh project --profile django                  # legacy single-profile mode
+  ./install.sh uninstall                                 # remove Polaris from project
+  ./install.sh uninstall --target ~/prj/my-app           # remove from specific project
   ./install.sh status
 EOF
     exit 1
@@ -281,6 +287,102 @@ _install_line() {
     fi
 }
 
+# ---- Manifest tracking ----
+
+MANIFEST_FILE=".polaris-manifest.json"
+
+# Convert profile lines to installed file paths
+# Regular lines stay as-is, cmd:name=path becomes commands/name.md
+_profile_lines_to_paths() {
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        if [[ "$line" == cmd:* ]]; then
+            local cmd_part="${line#cmd:}"
+            local cmd_name="${cmd_part%%=*}"
+            echo "commands/${cmd_name}.md"
+        else
+            echo "$line"
+        fi
+    done
+}
+
+# Write manifest after install
+# Args: claude_dir, profile_lines (newline-separated)
+# Reads STACK_NAMES and STACK_DIRS globals for stack info
+_write_manifest() {
+    local claude_dir="$1"
+    local profile_lines="$2"
+    local dry_run="${3:-false}"
+
+    if [[ "$dry_run" == "true" ]]; then
+        echo "  would write: $claude_dir/$MANIFEST_FILE"
+        return 0
+    fi
+
+    local manifest="$claude_dir/$MANIFEST_FILE"
+    local timestamp
+    timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+    # Build stacks JSON object
+    local stacks_json="{"
+    local first=true
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        if [[ "$first" == "true" ]]; then
+            first=false
+        else
+            stacks_json+=", "
+        fi
+        stacks_json+="\"${STACK_NAMES[$i]}\": \"${STACK_DIRS[$i]}\""
+    done
+    stacks_json+="}"
+
+    # Build files array
+    local files_json="["
+    first=true
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        if [[ "$first" == "true" ]]; then
+            first=false
+        else
+            files_json+=", "
+        fi
+        files_json+="\"$path\""
+    done < <(echo "$profile_lines" | _profile_lines_to_paths)
+    files_json+="]"
+
+    cat > "$manifest" <<EOF
+{
+  "installed_at": "$timestamp",
+  "layout": "${REPO_LAYOUT:-monorepo}",
+  "stacks": $stacks_json,
+  "files": $files_json
+}
+EOF
+    ok "  wrote manifest: $MANIFEST_FILE"
+}
+
+# Read file list from manifest
+# Args: claude_dir
+# Outputs file paths (one per line)
+_read_manifest_files() {
+    local claude_dir="$1"
+    local manifest="$claude_dir/$MANIFEST_FILE"
+
+    if [[ ! -f "$manifest" ]]; then
+        return 1
+    fi
+
+    if command -v jq &>/dev/null; then
+        jq -r '.files[]' "$manifest" 2>/dev/null
+    else
+        # Fallback: grep for quoted strings in the files array
+        sed -n '/\"files\"/,/\]/p' "$manifest" | grep '"' | sed 's/.*"\([^"]*\)".*/\1/' | grep -v '^files$'
+    fi
+}
+
+# ---- Profile reading ----
+
 # Read a profile file and return the list of files
 read_profile() {
     local profile_name="$1"
@@ -295,6 +397,134 @@ read_profile() {
 
     # Read non-empty, non-comment lines
     grep -v '^\s*#' "$profile_file" | grep -v '^\s*$'
+}
+
+# ---- Clean / uninstall helpers ----
+
+# Remove Polaris-installed files from a project
+# Args: claude_dir, dry_run
+_clean_project() {
+    local claude_dir="$1"
+    local dry_run="${2:-false}"
+
+    info "Cleaning Polaris files from $claude_dir/"
+
+    local manifest="$claude_dir/$MANIFEST_FILE"
+    local removed=0
+
+    if [[ -f "$manifest" ]]; then
+        # Manifest exists — remove only tracked files
+        info "Using manifest to identify Polaris files..."
+        while IFS= read -r rel_path; do
+            [[ -z "$rel_path" ]] && continue
+            local target="$claude_dir/$rel_path"
+            if [[ -f "$target" ]]; then
+                if [[ "$dry_run" == "true" ]]; then
+                    echo "  would remove: $rel_path"
+                else
+                    rm "$target"
+                    echo "  removed: $rel_path"
+                fi
+                (( removed++ )) || true
+            fi
+        done < <(_read_manifest_files "$claude_dir")
+    else
+        # No manifest — remove standard Polaris directories
+        warn "No manifest found — removing standard Polaris directories"
+        for subdir in skills agents workflows templates; do
+            if [[ -d "$claude_dir/$subdir" ]]; then
+                if [[ "$dry_run" == "true" ]]; then
+                    echo "  would remove: $subdir/"
+                else
+                    rm -rf "$claude_dir/$subdir"
+                    echo "  removed: $subdir/"
+                fi
+                (( removed++ )) || true
+            fi
+        done
+        # Remove all commands (can't distinguish Polaris vs user without manifest)
+        if [[ -d "$claude_dir/commands" ]]; then
+            if [[ "$dry_run" == "true" ]]; then
+                echo "  would remove: commands/"
+            else
+                rm -rf "$claude_dir/commands"
+                echo "  removed: commands/"
+            fi
+            (( removed++ )) || true
+        fi
+    fi
+
+    # Back up CLAUDE.md if it has user content
+    local claude_md="$claude_dir/CLAUDE.md"
+    if [[ -f "$claude_md" ]]; then
+        local has_user_content
+        has_user_content=$(awk '
+            /<!-- polaris:start -->/ { skip=1; next }
+            /<!-- polaris:end -->/   { skip=0; next }
+            !skip && /[^ \t]/ { found=1 }
+            END { print found+0 }
+        ' "$claude_md")
+
+        if [[ "$has_user_content" == "1" ]]; then
+            if [[ "$dry_run" == "true" ]]; then
+                echo "  would back up: CLAUDE.md → CLAUDE.md.bak"
+            else
+                cp "$claude_md" "${claude_md}.bak"
+                warn "Backed up CLAUDE.md → CLAUDE.md.bak (has user content)"
+            fi
+        fi
+
+        # Strip Polaris block from CLAUDE.md
+        if grep -q '<!-- polaris:start -->' "$claude_md"; then
+            if [[ "$dry_run" == "true" ]]; then
+                echo "  would strip: Polaris section from CLAUDE.md"
+            else
+                local preserved
+                preserved=$(awk '
+                    /<!-- polaris:start -->/ { skip=1; next }
+                    /<!-- polaris:end -->/   { skip=0; next }
+                    !skip { print }
+                ' "$claude_md")
+
+                # Trim trailing blank lines
+                preserved=$(echo "$preserved" | awk '
+                    /[^ \t]/ { p=NR }
+                    { lines[NR]=$0 }
+                    END { for (i=1; i<=p; i++) print lines[i] }
+                ')
+
+                if [[ -n "$preserved" ]]; then
+                    echo "$preserved" > "$claude_md"
+                    ok "Stripped Polaris section from CLAUDE.md (user content preserved)"
+                else
+                    rm "$claude_md"
+                    ok "Removed CLAUDE.md (was only Polaris content)"
+                fi
+            fi
+        fi
+    fi
+
+    # Remove manifest
+    if [[ -f "$manifest" ]]; then
+        if [[ "$dry_run" == "true" ]]; then
+            echo "  would remove: $MANIFEST_FILE"
+        else
+            rm "$manifest"
+            echo "  removed: $MANIFEST_FILE"
+        fi
+    fi
+
+    # Clean up empty directories
+    if [[ "$dry_run" != "true" ]]; then
+        for subdir in skills agents workflows templates commands; do
+            if [[ -d "$claude_dir/$subdir" ]]; then
+                find "$claude_dir/$subdir" -type d -empty -delete 2>/dev/null || true
+            fi
+        done
+    fi
+
+    ok "Clean complete ($removed items removed)"
+    echo ""
 }
 
 # ---- Stack composition helpers ----
@@ -534,9 +764,39 @@ _merge_profiles() {
     printf '%s\n' "${merged_lines[@]}"
 }
 
+# Detect if project uses monorepo or multi-repo layout
+# Sets global REPO_LAYOUT to "monorepo" or "multi-repo"
+_detect_repo_layout() {
+    local project_dir="$1"
+    REPO_LAYOUT="monorepo"
+
+    # If project root is a git repo, it's a monorepo
+    if [[ -d "$project_dir/.git" ]]; then
+        return
+    fi
+
+    # Check if any stack directory is its own git repo
+    local i
+    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
+        local dir="${STACK_DIRS[$i]}"
+        if [[ -n "$dir" && -d "$project_dir/$dir/.git" ]]; then
+            REPO_LAYOUT="multi-repo"
+            return
+        fi
+    done
+}
+
 # Generate stack context markdown from .claude.md snippets
 _generate_stack_context() {
     local output=""
+
+    # Add multi-repo notice if applicable
+    if [[ "$REPO_LAYOUT" == "multi-repo" ]]; then
+        output+="> **Repo layout: multi-repo** — each stack directory below is its own git repository."$'\n'
+        output+="> Always \`cd\` into the appropriate directory before running git commands."$'\n'
+        output+="> Never have a single phase span multiple repos. Use integration summaries as handoffs."$'\n\n'
+    fi
+
     local i
     for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
         local name="${STACK_NAMES[$i]}"
@@ -766,12 +1026,15 @@ _apply_claude_md_amend() {
         fi
         ok "Updated Polaris section in $claude_md_file"
     else
-        # No markers — append
+        # No markers — append (use temp file to avoid read+write on same file)
+        local tmp
+        tmp="$(mktemp)"
         {
             cat "$claude_md_file"
             echo ""
             echo "$polaris_block"
-        } > "$claude_md_file"
+        } > "$tmp"
+        mv "$tmp" "$claude_md_file"
         ok "Appended Polaris section to $claude_md_file"
     fi
 }
@@ -866,10 +1129,11 @@ _resolve_project_dir() {
         local git_root
         git_root="$(git rev-parse --show-toplevel 2>/dev/null || true)"
         if [[ -z "$git_root" ]]; then
-            err "Not inside a git repo. Run from your project directory or use --target."
-            exit 1
+            warn "Not inside a git repo — using current directory as project root." >&2
+            echo "$(pwd)"
+        else
+            echo "$git_root"
         fi
-        echo "$git_root"
     fi
 }
 
@@ -900,7 +1164,8 @@ _install_stacks() {
     local dry_run="$2"
     local force="$3"
     local no_claude_md="$4"
-    shift 4
+    local fresh="${5:-false}"
+    shift 5 2>/dev/null || shift 4
     local extras=("$@")
 
     # Build descriptor
@@ -927,6 +1192,11 @@ _install_stacks() {
     # Install extras
     _install_extras "$claude_dir" "$dry_run" "$force" "${extras[@]+"${extras[@]}"}"
 
+    # Detect repo layout (monorepo vs multi-repo)
+    local project_dir
+    project_dir="$(dirname "$claude_dir")"
+    _detect_repo_layout "$project_dir"
+
     # Generate CLAUDE.md
     if [[ "$no_claude_md" != "true" ]]; then
         local stack_context
@@ -937,8 +1207,15 @@ _install_stacks() {
 
         echo ""
         info "Updating CLAUDE.md..."
-        _apply_claude_md_amend "$claude_dir/CLAUDE.md" "$polaris_block" "$dry_run"
+        if [[ "$fresh" == "true" ]]; then
+            _apply_claude_md_fresh "$claude_dir/CLAUDE.md" "$polaris_block" "$dry_run"
+        else
+            _apply_claude_md_amend "$claude_dir/CLAUDE.md" "$polaris_block" "$dry_run"
+        fi
     fi
+
+    # Write manifest
+    _write_manifest "$claude_dir" "$merged" "$dry_run"
 
     echo ""
     ok "Project install complete (${descriptor})"
@@ -956,9 +1233,12 @@ _install_single_profile() {
 
     info "Installing profile '$profile' to $claude_dir/"
 
+    local profile_lines
+    profile_lines="$(read_profile "$profile")"
+
     while IFS= read -r line; do
         _install_line "$line" "$claude_dir" "$dry_run" "$force"
-    done < <(read_profile "$profile")
+    done <<< "$profile_lines"
 
     # Install extras
     _install_extras "$claude_dir" "$dry_run" "$force" "${extras[@]+"${extras[@]}"}"
@@ -967,6 +1247,9 @@ _install_single_profile() {
     if [[ "$no_claude_md" != "true" ]]; then
         _update_claude_md "$profile" "$claude_dir/CLAUDE.md" ".claude/" "false" "$dry_run" "${extras[@]+"${extras[@]}"}"
     fi
+
+    # Write manifest
+    _write_manifest "$claude_dir" "$profile_lines" "$dry_run"
 
     echo ""
     ok "Project install complete ($profile)"
@@ -1073,12 +1356,9 @@ cmd_project() {
     local target="$4"
     local fresh="$5"
     local no_claude_md="$6"
-    shift 6
+    local clean="$7"
+    shift 7 2>/dev/null || shift 6
     local extras=("$@")
-
-    if [[ "$fresh" == "true" ]]; then
-        warn "--fresh is only supported for 'polaris global'. Ignoring."
-    fi
 
     # Validate: can't use both --profile and --stack
     if [[ -n "$profile" && ${#STACK_NAMES[@]} -gt 0 ]]; then
@@ -1092,6 +1372,13 @@ cmd_project() {
     local claude_dir="$project_dir/.claude"
     mkdir -p "$claude_dir"
 
+    # Clean existing Polaris files if requested
+    if [[ "$clean" == "true" ]]; then
+        _clean_project "$claude_dir" "$dry_run"
+        # After clean, force-install everything (no skip on unchanged)
+        force="true"
+    fi
+
     if [[ -n "$profile" ]]; then
         # Legacy: single profile mode
         _install_single_profile "$profile" "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
@@ -1104,12 +1391,32 @@ cmd_project() {
                 STACK_DIRS[$i]="$_STACK_DIRECTORY"
             fi
         done
-        _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
+        _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "$fresh" "${extras[@]+"${extras[@]}"}"
     else
         # Interactive mode
         _interactive_select
-        _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
+        _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "$fresh" "${extras[@]+"${extras[@]}"}"
     fi
+}
+
+cmd_uninstall() {
+    ensure_init
+    local dry_run="$1"
+    local target="$2"
+
+    local project_dir
+    project_dir="$(_resolve_project_dir "$target")"
+    local claude_dir="$project_dir/.claude"
+
+    if [[ ! -d "$claude_dir" ]]; then
+        err "No .claude/ directory found in $project_dir"
+        exit 1
+    fi
+
+    echo ""
+    _clean_project "$claude_dir" "$dry_run"
+    ok "Polaris uninstalled from $project_dir"
+    echo ""
 }
 
 cmd_status() {
@@ -1263,6 +1570,7 @@ shift || true
 DRY_RUN="false"
 FORCE="false"
 FRESH="false"
+CLEAN="false"
 NO_CLAUDE_MD="false"
 PROFILE=""
 TARGET=""
@@ -1296,6 +1604,7 @@ while [[ $# -gt 0 ]]; do
         --dry-run|-n)     DRY_RUN="true"; shift ;;
         --force|-f)       FORCE="true"; shift ;;
         --fresh)          FRESH="true"; shift ;;
+        --clean)          CLEAN="true"; shift ;;
         --no-claude-md)   NO_CLAUDE_MD="true"; shift ;;
         *)                err "Unknown option: $1"; usage ;;
     esac
@@ -1305,7 +1614,8 @@ case "$COMMAND" in
     init)           cmd_init ;;
     global)         cmd_global "$DRY_RUN" "$FORCE" "$FRESH" "$NO_CLAUDE_MD" ;;
     new)            cmd_new "$NEW_PATH" "$DRY_RUN" "$FORCE" "$NO_CLAUDE_MD" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
-    project)        cmd_project "$PROFILE" "$DRY_RUN" "$FORCE" "$TARGET" "$FRESH" "$NO_CLAUDE_MD" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
+    project)        cmd_project "$PROFILE" "$DRY_RUN" "$FORCE" "$TARGET" "$FRESH" "$NO_CLAUDE_MD" "$CLEAN" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
+    uninstall)      cmd_uninstall "$DRY_RUN" "$TARGET" ;;
     status)         cmd_status ;;
     list-profiles)  cmd_list_profiles ;;
     list-skills)    cmd_list_skills ;;

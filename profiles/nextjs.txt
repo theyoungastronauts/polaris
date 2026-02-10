@@ -13,3 +13,4 @@ agents/executor.md
 cmd:react=skills/execution/react-best-practices.md
 cmd:tailwind=skills/execution/tailwind-v4-design-system.md
 cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
+cmd:visual-feedback=skills/execution/visual-feedback.md
