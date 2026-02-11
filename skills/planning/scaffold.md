@@ -54,12 +54,13 @@ agents prompt simultaneously, it's unusable.
 **For each sub-project, ask the user for the required values upfront:**
 
 Django bootstrap values:
+- Blueprint: `minimal` (Django + DRF + Postgres + Docker — no auth, no Redis), `standard` (+ Redis, custom User/JWT auth, Sentry — most production apps), or `full` (+ Celery/Beat, S3/R2, email, discord, Heroku)
 - Service/directory name (e.g., `my_service`)
 - Docker Compose project name (kebab-case, e.g., `my-service`)
 - Database name (snake_case, e.g., `my_service`)
 - Host port (default: `8000`)
 - Cache key prefix (e.g., `myserv`)
-- Heroku app name (if deploying, or skip)
+- Heroku app name (only if blueprint is `full` and deploying, otherwise skip)
 
 Next.js bootstrap values:
 - App name (e.g., `my-app`)
@@ -70,6 +71,8 @@ Next.js bootstrap values:
 - App display title (e.g., `My App`)
 - Architecture mode: frontend-centric, SSR-centric, or combination
 
+> **Note:** When the Django blueprint is `minimal` (no auth), recommend the Next.js app without auth pages (no login, register, or protected route patterns). Auth can be added later if the Django project upgrades to `standard`.
+
 Use the design doc and project name to propose sensible defaults for most of these.
 Present them as a table the user can confirm or override:
 
@@ -77,12 +80,13 @@ Present them as a table the user can confirm or override:
 Bootstrap Configuration:
 
   Django (server/):
+    Blueprint:       standard        (most production apps with auth)
     Service name:    my_service      (from project name)
     Compose project: my-service
     Database:        my_service
     Host port:       8000
     Cache prefix:    myserv
-    Heroku app:      (skip)
+    Heroku app:      (skip — full blueprint only)
 
   Next.js (web/):
     App name:        my-app
@@ -126,7 +130,8 @@ should not prompt the user for any bootstrap inputs.
    > Read the bootstrap skill at .claude/commands/{bootstrap_command}.md and follow it.
    > Use these pre-filled configuration values (do NOT prompt the user for these):
    >
-   > {list all key=value pairs from step 3 for this sub-project}
+   > blueprint={blueprint}
+   > {list all remaining key=value pairs from step 3 for this sub-project}
    >
    > After bootstrap completes, run: git add . && git commit -m "chore: initial {label} scaffold"
    > Report back what was created.

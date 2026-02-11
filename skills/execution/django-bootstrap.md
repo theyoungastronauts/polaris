@@ -1,6 +1,6 @@
 # Django Bootstrap
 
-On-demand command for scaffolding a new Django/DRF project with Docker, Celery, split settings, and standard conventions.
+On-demand command for scaffolding a new Django/DRF project with Docker, PostgreSQL, split settings, and standard conventions. Supports three blueprint tiers for right-sized infrastructure.
 
 ## Before You Start
 
@@ -8,12 +8,23 @@ Ask the user for these values (provide defaults where shown):
 
 | Placeholder | Description | Example |
 |-------------|-------------|---------|
+| `{blueprint}` | Blueprint tier: `minimal`, `standard`, or `full` | `standard` |
 | `{service_name}` | Top-level directory name | `my_service` |
 | `{project-name}` | Docker Compose project name (kebab-case) | `my-service` |
 | `{db_name}` | Postgres database name (snake_case) | `my_service` |
 | `{host_port}` | Host port for Django (default: `8000`) | `8002` |
 | `{project_prefix}` | Short cache key prefix | `myserv` |
-| `{heroku-app-name}` | Heroku app name (if deploying) | `my-service-prod` |
+| `{heroku-app-name}` | Heroku app name (`full` only, if deploying) | `my-service-prod` |
+
+### Blueprint Tiers
+
+| Tier | Name | Includes | Use when |
+|------|------|----------|----------|
+| 1 | **minimal** | Django + DRF + Postgres + Docker. LocMem cache, session auth, AllowAny, local file storage, console logging. No Redis, Celery, JWT, custom User, S3, Sentry, email, discord. | Simple APIs, prototypes, no user accounts |
+| 2 | **standard** | Minimal + Redis cache + custom User (`access` app) + JWT auth + Sentry. No Celery, S3, email, discord. | Most production apps with auth |
+| 3 | **full** | Standard + Celery/Beat + S3/R2 + email + discord + Heroku deployment. | Background tasks, file uploads, notifications |
+
+> **Only generate files and sections marked for your blueprint tier.** Sections are tagged `[ALL]`, `[STANDARD+]`, or `[FULL]`. Generate `[ALL]` always, `[STANDARD+]` for standard and full, `[FULL]` only for full.
 
 > **MANDATORY: This project runs entirely in Docker.**
 > Every Docker file below (Dockerfile.dev, docker-compose.yml, Makefile, docker/ scripts) MUST be generated.
@@ -22,7 +33,7 @@ Ask the user for these values (provide defaults where shown):
 ## Bootstrapping Steps
 
 1. Create `{service_name}/` directory and all subdirectories
-2. Generate all files from templates below, replacing placeholders
+2. Generate all files from templates below, replacing placeholders (respecting blueprint tier tags)
 3. `cd {service_name} && make build && make up`
 4. `make migrate && make createsuperuser`
 5. Verify admin at `http://localhost:{host_port}/admin/`
@@ -30,6 +41,93 @@ Ask the user for these values (provide defaults where shown):
 ---
 
 ## Directory Structure
+
+### `[MINIMAL]` Directory Structure
+
+```
+{service_name}/
+├── project/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   ├── settings/
+│   │   ├── __init__.py
+│   │   ├── environment.py
+│   │   ├── security.py
+│   │   ├── apps.py
+│   │   ├── database.py
+│   │   ├── cache.py
+│   │   ├── auth.py
+│   │   ├── cors.py
+│   │   ├── storage.py
+│   │   └── logging.py
+│   ├── utils/
+│   │   └── __init__.py
+│   └── templates/
+├── docker/
+│   ├── entrypoint.sh
+│   └── wait-for-it.sh
+├── docker-compose.yml
+├── Dockerfile.dev
+├── Makefile
+├── Procfile
+├── manage.py
+├── requirements.txt
+├── runtime.txt
+├── .env.example
+├── .gitignore
+└── .coveragerc
+```
+
+### `[STANDARD]` Directory Structure — adds `access/` app and `sentry.py`
+
+```
+{service_name}/
+├── project/
+│   ├── __init__.py
+│   ├── models.py
+│   ├── urls.py
+│   ├── wsgi.py
+│   ├── settings/
+│   │   ├── __init__.py
+│   │   ├── environment.py
+│   │   ├── security.py
+│   │   ├── apps.py
+│   │   ├── database.py
+│   │   ├── cache.py
+│   │   ├── auth.py
+│   │   ├── cors.py
+│   │   ├── storage.py
+│   │   ├── logging.py
+│   │   └── sentry.py
+│   ├── utils/
+│   │   └── __init__.py
+│   └── templates/
+├── access/
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── apps.py
+│   ├── models.py
+│   ├── migrations/
+│   │   └── __init__.py
+│   └── urls.py
+├── docker/
+│   ├── entrypoint.sh
+│   └── wait-for-it.sh
+├── docker-compose.yml
+├── Dockerfile.dev
+├── Makefile
+├── Procfile
+├── manage.py
+├── requirements.txt
+├── runtime.txt
+├── .env.example
+├── .gitignore
+└── .coveragerc
+```
+
+### `[FULL]` Directory Structure — adds `worker.py`, `services/`, cloud settings
 
 ```
 {service_name}/
@@ -89,7 +187,7 @@ Ask the user for these values (provide defaults where shown):
 
 ## File Templates
 
-### manage.py
+### manage.py `[ALL]`
 
 ```python
 #!/usr/bin/env python
@@ -114,7 +212,14 @@ if __name__ == "__main__":
     main()
 ```
 
-### project/\_\_init\_\_.py
+### project/\_\_init\_\_.py — varies by tier
+
+**`[MINIMAL]` and `[STANDARD]`:** empty file
+
+```python
+```
+
+**`[FULL]`:**
 
 ```python
 from .worker import app as celery_app
@@ -122,7 +227,7 @@ from .worker import app as celery_app
 __all__ = ("celery_app",)
 ```
 
-### project/models.py
+### project/models.py `[ALL]`
 
 ```python
 import uuid
@@ -186,7 +291,7 @@ class AbstractModel(models.Model):
         ordering = ["-created_at"]
 ```
 
-### project/worker.py
+### project/worker.py `[FULL]`
 
 ```python
 import os
@@ -208,7 +313,7 @@ def debug_task(self):
     print(f"Request: {self.request!r}")
 ```
 
-### project/wsgi.py
+### project/wsgi.py `[ALL]`
 
 ```python
 import os
@@ -220,7 +325,7 @@ os.environ.setdefault("DJANGO_SETTINGS_MODULE", "project.settings")
 application = get_wsgi_application()
 ```
 
-### project/urls.py
+### project/urls.py `[ALL]`
 
 ```python
 from django.contrib import admin
@@ -237,7 +342,74 @@ urlpatterns = [
 
 ## Settings
 
-### project/settings/\_\_init\_\_.py
+### project/settings/\_\_init\_\_.py — varies by tier
+
+**`[MINIMAL]`** (9 imports):
+
+```python
+# Environment and core settings
+from .environment import *  # noqa: F401, F403
+
+# Security, middleware, templates
+from .security import *  # noqa: F401, F403
+
+# Installed apps
+from .apps import *  # noqa: F401, F403
+
+# Database
+from .database import *  # noqa: F401, F403
+
+# Cache
+from .cache import *  # noqa: F401, F403
+
+# Authentication and REST framework
+from .auth import *  # noqa: F401, F403
+
+# CORS
+from .cors import *  # noqa: F401, F403
+
+# Storage
+from .storage import *  # noqa: F401, F403
+
+# Logging
+from .logging import *  # noqa: F401, F403
+```
+
+**`[STANDARD]`** (10 imports — adds sentry):
+
+```python
+# Environment and core settings
+from .environment import *  # noqa: F401, F403
+
+# Security, middleware, templates
+from .security import *  # noqa: F401, F403
+
+# Installed apps
+from .apps import *  # noqa: F401, F403
+
+# Database
+from .database import *  # noqa: F401, F403
+
+# Cache
+from .cache import *  # noqa: F401, F403
+
+# Authentication and REST framework
+from .auth import *  # noqa: F401, F403
+
+# CORS
+from .cors import *  # noqa: F401, F403
+
+# Storage
+from .storage import *  # noqa: F401, F403
+
+# Logging
+from .logging import *  # noqa: F401, F403
+
+# Sentry (Error Tracking)
+from .sentry import *  # noqa: F401, F403
+```
+
+**`[FULL]`** (13 imports — adds aws, worker, email, sentry):
 
 ```python
 # Environment and core settings
@@ -280,7 +452,7 @@ from .logging import *  # noqa: F401, F403
 from .sentry import *  # noqa: F401, F403
 ```
 
-### project/settings/environment.py
+### project/settings/environment.py `[ALL]`
 
 ```python
 import os
@@ -305,7 +477,7 @@ VERSION = ENV.str("VERSION", default="0.1.0")
 FRONTEND_BASE_URL = ENV.str("FRONTEND_BASE_URL", default="http://localhost:3000")
 ```
 
-### project/settings/security.py
+### project/settings/security.py `[ALL]`
 
 ```python
 from .environment import BASE_DIR, ENV, DEBUG
@@ -374,7 +546,42 @@ if not DEBUG:
     SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 ```
 
-### project/settings/apps.py
+### project/settings/apps.py — varies by tier
+
+**`[MINIMAL]`:**
+
+```python
+DJANGO_APPS = [
+    "admin_interface",
+    "colorfield",
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
+]
+
+THIRD_PARTY_APPS = [
+    "rest_framework",
+    "corsheaders",
+    "admin_auto_filters",
+]
+
+LOCAL_APPS = [
+    "project",
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
+# Required for django-admin-interface
+X_FRAME_OPTIONS = "SAMEORIGIN"
+SILENCED_SYSTEM_CHECKS = ["security.W019"]
+```
+
+Note: `admin_interface` and `colorfield` must come before `django.contrib.admin`.
+
+**`[STANDARD+]`** (adds simplejwt, token_blacklist, access):
 
 ```python
 DJANGO_APPS = [
@@ -411,7 +618,7 @@ SILENCED_SYSTEM_CHECKS = ["security.W019"]
 
 Note: `admin_interface` and `colorfield` must come before `django.contrib.admin`.
 
-### project/settings/database.py
+### project/settings/database.py `[ALL]`
 
 ```python
 import dj_database_url
@@ -433,7 +640,29 @@ DATABASES = {
 }
 ```
 
-### project/settings/cache.py
+### project/settings/cache.py — varies by tier
+
+**`[MINIMAL]`** (LocMemCache, database sessions):
+
+```python
+CACHE_TIMEOUT_SHORT = 5
+CACHE_TIMEOUT_MEDIUM = 30
+CACHE_TIMEOUT_DEFAULT = 60
+CACHE_TIMEOUT_LONG = 300
+
+CACHES = {
+    "default": {
+        "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+        "KEY_PREFIX": "{project_prefix}",
+        "VERSION": 1,
+        "TIMEOUT": CACHE_TIMEOUT_DEFAULT,
+    },
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
+```
+
+**`[STANDARD+]`** (Redis, cache sessions):
 
 ```python
 import ssl
@@ -464,7 +693,28 @@ SESSION_ENGINE = "django.contrib.sessions.backends.cache"
 SESSION_CACHE_ALIAS = "default"
 ```
 
-### project/settings/auth.py
+### project/settings/auth.py — varies by tier
+
+**`[MINIMAL]`** (session auth, AllowAny):
+
+```python
+REST_FRAMEWORK = {
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.SessionAuthentication",
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.AllowAny",
+    ],
+    "DEFAULT_RENDERER_CLASSES": [
+        "rest_framework.renderers.JSONRenderer",
+    ],
+    "DEFAULT_PARSER_CLASSES": [
+        "rest_framework.parsers.JSONParser",
+    ],
+}
+```
+
+**`[STANDARD+]`** (JWT + session, IsAuthenticated, custom user):
 
 ```python
 from datetime import timedelta
@@ -507,7 +757,7 @@ SIMPLE_JWT = {
 }
 ```
 
-### project/settings/cors.py
+### project/settings/cors.py `[ALL]`
 
 ```python
 from .environment import ENV, DEBUG, FRONTEND_BASE_URL
@@ -533,7 +783,7 @@ CORS_ALLOW_HEADERS = [
 ]
 ```
 
-### project/settings/aws.py
+### project/settings/aws.py `[FULL]`
 
 ```python
 from .environment import ENV
@@ -564,7 +814,32 @@ AWS_S3_CUSTOM_DOMAIN = R2_CUSTOM_DOMAIN
 USE_R2_STORAGE = ENV.bool("USE_R2_STORAGE", default=False)
 ```
 
-### project/settings/storage.py
+### project/settings/storage.py — varies by tier
+
+**`[MINIMAL]` and `[STANDARD]`** (local filesystem only):
+
+```python
+import os
+
+from .environment import BASE_DIR
+
+TEMP_DIR = os.path.join(BASE_DIR, "tmp")
+os.makedirs(TEMP_DIR, exist_ok=True)
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+os.makedirs(MEDIA_ROOT, exist_ok=True)
+```
+
+**`[FULL]`** (R2 conditional):
 
 ```python
 import os
@@ -618,7 +893,7 @@ else:
     os.makedirs(MEDIA_ROOT, exist_ok=True)
 ```
 
-### project/settings/worker.py
+### project/settings/worker.py `[FULL]`
 
 ```python
 import ssl
@@ -652,7 +927,7 @@ CELERY_TASK_TIME_LIMIT = 30 * 60  # 30 minutes
 PROCESS_TASKS_ASYNC = ENV.bool("PROCESS_TASKS_ASYNC", default=True)
 ```
 
-### project/settings/email.py
+### project/settings/email.py `[FULL]`
 
 ```python
 from .environment import ENV
@@ -668,7 +943,37 @@ DEFAULT_FROM_EMAIL = ENV.str("DEFAULT_FROM_EMAIL", default="noreply@example.com"
 PASSWORD_RESET_TIMEOUT = 3600
 ```
 
-### project/settings/logging.py
+### project/settings/logging.py — varies by tier
+
+**`[MINIMAL]` and `[STANDARD]`** (no celery logger):
+
+```python
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "formatter": "verbose",
+        },
+    },
+    "root": {
+        "handlers": ["console"],
+        "level": "INFO",
+    },
+    "loggers": {
+        "django": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
+}
+```
+
+**`[FULL]`** (adds celery logger):
 
 ```python
 LOGGING = {
@@ -697,7 +1002,36 @@ LOGGING = {
 }
 ```
 
-### project/settings/sentry.py
+### project/settings/sentry.py — `[STANDARD+]`, varies by tier
+
+**`[STANDARD]`** (Django + Logging integrations only):
+
+```python
+import logging
+from .environment import ENV, ENVIRONMENT
+
+SENTRY_DSN = ENV.str("SENTRY_DSN", default="")
+
+if SENTRY_DSN:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+    from sentry_sdk.integrations.logging import LoggingIntegration
+
+    sentry_sdk.init(
+        dsn=SENTRY_DSN,
+        environment=ENVIRONMENT,
+        integrations=[
+            DjangoIntegration(),
+            LoggingIntegration(
+                level=logging.INFO,
+                event_level=logging.ERROR,
+            ),
+        ],
+        send_default_pii=False,
+    )
+```
+
+**`[FULL]`** (adds Celery + Redis integrations):
 
 ```python
 import logging
@@ -730,7 +1064,7 @@ if SENTRY_DSN:
 
 ---
 
-## Services
+## Services `[FULL]`
 
 ### project/services/\_\_init\_\_.py
 
@@ -896,7 +1230,7 @@ class DiscordService:
 
 ---
 
-## Custom User Model
+## Custom User Model `[STANDARD+]`
 
 ### access/models.py
 
@@ -963,7 +1297,88 @@ urlpatterns = []
 
 ## Docker (REQUIRED — do not skip)
 
-### docker-compose.yml
+### docker-compose.yml — varies by tier
+
+**`[MINIMAL]`** (web + db):
+
+```yaml
+name: {project-name}
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["/wait-for-it.sh", "db", "--", "/entrypoint.sh"]
+    volumes:
+      - .:/app
+    ports:
+      - "{host_port}:8000"
+    depends_on:
+      - db
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
+
+  db:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB={db_name}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+volumes:
+  postgres_data:
+```
+
+**`[STANDARD]`** (web + db + redis):
+
+```yaml
+name: {project-name}
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    command: ["/wait-for-it.sh", "db", "--", "/entrypoint.sh"]
+    volumes:
+      - .:/app
+    ports:
+      - "{host_port}:8000"
+    depends_on:
+      - db
+      - redis
+    env_file:
+      - .env
+    environment:
+      - DEBUG=True
+      - DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
+
+  db:
+    image: postgres:16
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB={db_name}
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+
+  redis:
+    image: redis:7
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+**`[FULL]`** (web + db + redis + celery + celery-beat):
 
 ```yaml
 name: {project-name}
@@ -1040,7 +1455,7 @@ volumes:
   redis_data:
 ```
 
-### Dockerfile.dev
+### Dockerfile.dev `[ALL]`
 
 ```dockerfile
 FROM python:3.12-slim
@@ -1070,7 +1485,7 @@ EXPOSE 8000
 CMD ["/entrypoint.sh"]
 ```
 
-### docker/entrypoint.sh
+### docker/entrypoint.sh `[ALL]`
 
 ```bash
 #!/bin/bash
@@ -1083,7 +1498,7 @@ echo "Starting development server..."
 python manage.py runserver 0.0.0.0:8000
 ```
 
-### docker/wait-for-it.sh
+### docker/wait-for-it.sh `[ALL]`
 
 ```bash
 #!/bin/bash
@@ -1104,7 +1519,146 @@ exec $cmd
 
 ---
 
-## Makefile (REQUIRED — do not skip)
+## Makefile (REQUIRED — do not skip) — varies by tier
+
+**`[MINIMAL]` and `[STANDARD]`** (docker + django + test + db + utils):
+
+```makefile
+# {project-name} - Makefile
+PROJECT_NAME = {project-name}
+DOCKER_COMPOSE = docker compose --project-name $(PROJECT_NAME)
+
+# ============================================================================
+# Docker
+# ============================================================================
+
+.PHONY: build up down restart stop ps logs logs-all bash wipe
+
+build:
+	$(DOCKER_COMPOSE) build
+
+up:
+	$(DOCKER_COMPOSE) up --detach
+
+down:
+	$(DOCKER_COMPOSE) down
+
+restart: down up
+
+stop:
+	$(DOCKER_COMPOSE) stop
+
+ps:
+	$(DOCKER_COMPOSE) ps
+
+logs:
+	$(DOCKER_COMPOSE) logs -f web
+
+logs-all:
+	$(DOCKER_COMPOSE) logs -f
+
+bash:
+	$(DOCKER_COMPOSE) exec web bash
+
+wipe:
+	@echo "WARNING: This will delete all containers and volumes!"
+	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ]
+	$(DOCKER_COMPOSE) down -v --remove-orphans
+
+# ============================================================================
+# Django
+# ============================================================================
+
+.PHONY: manage shell migrate makemigrations createsuperuser collectstatic showmigrations
+
+manage:
+	$(DOCKER_COMPOSE) exec web python manage.py $(filter-out $@,$(MAKECMDGOALS))
+
+shell:
+	$(DOCKER_COMPOSE) exec web python manage.py shell
+
+migrate:
+	$(DOCKER_COMPOSE) exec web python manage.py migrate
+
+makemigrations:
+	$(DOCKER_COMPOSE) exec web python manage.py makemigrations
+
+createsuperuser:
+	$(DOCKER_COMPOSE) exec web python manage.py createsuperuser
+
+collectstatic:
+	$(DOCKER_COMPOSE) exec web python manage.py collectstatic --noinput
+
+showmigrations:
+	$(DOCKER_COMPOSE) exec web python manage.py showmigrations
+
+# ============================================================================
+# Testing
+# ============================================================================
+
+.PHONY: test test-cov test-cov-html
+
+test:
+	$(DOCKER_COMPOSE) exec web python manage.py test
+
+test-cov:
+	$(DOCKER_COMPOSE) exec web coverage run --source='.' manage.py test
+	$(DOCKER_COMPOSE) exec web coverage report
+
+test-cov-html:
+	$(DOCKER_COMPOSE) exec web coverage run --source='.' manage.py test
+	$(DOCKER_COMPOSE) exec web coverage html
+
+# ============================================================================
+# Database
+# ============================================================================
+
+.PHONY: dbshell dbreset
+
+dbshell:
+	$(DOCKER_COMPOSE) exec db psql -U postgres -d {db_name}
+
+dbreset:
+	@echo "WARNING: This will delete the database!"
+	@read -p "Are you sure? [y/N] " confirm && [ "$$confirm" = "y" ]
+	$(DOCKER_COMPOSE) exec db psql -U postgres -c "DROP DATABASE IF EXISTS {db_name};"
+	$(DOCKER_COMPOSE) exec db psql -U postgres -c "CREATE DATABASE {db_name};"
+	$(DOCKER_COMPOSE) exec web python manage.py migrate
+
+# ============================================================================
+# Admin Theme
+# ============================================================================
+
+.PHONY: admin_theme_dump admin_theme_load
+
+admin_theme_dump:
+	$(DOCKER_COMPOSE) exec web python manage.py dumpdata admin_interface.Theme --indent 2 > admin_theme.json
+
+admin_theme_load:
+	$(DOCKER_COMPOSE) exec web python manage.py loaddata admin_theme.json
+
+# ============================================================================
+# Utilities
+# ============================================================================
+
+.PHONY: lint format clean
+
+lint:
+	$(DOCKER_COMPOSE) exec web ruff check .
+
+format:
+	$(DOCKER_COMPOSE) exec web ruff format .
+
+clean:
+	find . -type f -name "*.pyc" -delete
+	find . -type d -name "__pycache__" -delete
+
+# Catch-all for manage commands
+%:
+	@:
+```
+
+**`[FULL]`** (adds celery + heroku sections):
 
 ```makefile
 # {project-name} - Makefile
@@ -1298,7 +1852,16 @@ ngrok:
 
 ## Deployment
 
-### Procfile
+### Procfile — varies by tier
+
+**`[MINIMAL]` and `[STANDARD]`:**
+
+```
+release: python manage.py migrate --noinput && python manage.py collectstatic --noinput
+web: gunicorn project.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --threads 4 --worker-class gthread
+```
+
+**`[FULL]`** (adds worker + beat):
 
 ```
 release: python manage.py migrate --noinput && python manage.py collectstatic --noinput
@@ -1307,13 +1870,13 @@ worker: celery --app=project worker --loglevel=INFO --concurrency=2 --without-he
 beat: celery --app=project beat --loglevel=INFO
 ```
 
-### runtime.txt
+### runtime.txt `[ALL]`
 
 ```
 python-3.12.8
 ```
 
-### .github/workflows/deploy-backend.yml
+### .github/workflows/deploy-backend.yml `[FULL]`
 
 ```yaml
 name: Deploy Backend
@@ -1343,7 +1906,47 @@ jobs:
 
 ## Config Files
 
-### requirements.txt
+### requirements.txt — varies by tier
+
+**`[MINIMAL]`:**
+
+```
+Django>=5.1,<5.2
+djangorestframework>=3.15,<4.0
+django-cors-headers>=4.4,<5.0
+django-environ>=0.11,<1.0
+django-admin-interface>=0.28,<1.0
+django-admin-auto-filters>=0.0.11
+dj-database-url>=2.2,<3.0
+whitenoise>=6.7,<7.0
+gunicorn>=22.0,<23.0
+psycopg2-binary>=2.9,<3.0
+coverage>=7.6,<8.0
+ruff>=0.7,<1.0
+```
+
+**`[STANDARD]`** (adds simplejwt, redis, sentry-sdk, storages):
+
+```
+Django>=5.1,<5.2
+djangorestframework>=3.15,<4.0
+djangorestframework-simplejwt>=5.3,<6.0
+django-cors-headers>=4.4,<5.0
+django-environ>=0.11,<1.0
+django-storages[boto3]>=1.14,<2.0
+django-admin-interface>=0.28,<1.0
+django-admin-auto-filters>=0.0.11
+dj-database-url>=2.2,<3.0
+whitenoise>=6.7,<7.0
+gunicorn>=22.0,<23.0
+redis>=5.0,<6.0
+psycopg2-binary>=2.9,<3.0
+sentry-sdk>=2.14,<3.0
+coverage>=7.6,<8.0
+ruff>=0.7,<1.0
+```
+
+**`[FULL]`** (adds celery, boto3, requests):
 
 ```
 Django>=5.1,<5.2
@@ -1367,7 +1970,59 @@ coverage>=7.6,<8.0
 ruff>=0.7,<1.0
 ```
 
-### .env.example
+### .env.example — varies by tier
+
+**`[MINIMAL]`:**
+
+```bash
+# Core
+DEBUG=True
+ENVIRONMENT=development
+SECRET_KEY=django-insecure-change-me-in-production
+VERSION=0.1.0
+
+# Database
+DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
+
+# Hosts
+ALLOWED_HOSTS=localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://localhost:{host_port}
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+# Frontend
+FRONTEND_BASE_URL=http://localhost:3000
+```
+
+**`[STANDARD]`** (adds redis, jwt, sentry):
+
+```bash
+# Core
+DEBUG=True
+ENVIRONMENT=development
+SECRET_KEY=django-insecure-change-me-in-production
+VERSION=0.1.0
+
+# Database & Cache
+DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
+REDIS_URL=redis://redis:6379/0
+
+# Hosts
+ALLOWED_HOSTS=localhost,127.0.0.1
+CSRF_TRUSTED_ORIGINS=http://localhost:{host_port}
+CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+# Frontend
+FRONTEND_BASE_URL=http://localhost:3000
+
+# JWT
+JWT_ACCESS_TOKEN_LIFETIME_MINUTES=480
+JWT_REFRESH_TOKEN_LIFETIME_DAYS=7
+
+# Error Tracking
+SENTRY_DSN=
+```
+
+**`[FULL]`** (adds celery, R2, email):
 
 ```bash
 # Core
@@ -1416,7 +2071,7 @@ SENTRY_DSN=
 PROCESS_TASKS_ASYNC=True
 ```
 
-### .gitignore
+### .gitignore `[ALL]`
 
 ```
 # Python
@@ -1468,7 +2123,7 @@ celerybeat-schedule
 celerybeat-schedule.db
 ```
 
-### .coveragerc
+### .coveragerc `[ALL]`
 
 ```ini
 [run]
@@ -1500,7 +2155,7 @@ directory = htmlcov
 
 ---
 
-## App Structure Convention
+## App Structure Convention `[ALL]`
 
 When adding a new app, create this structure:
 
@@ -1512,7 +2167,7 @@ When adding a new app, create this structure:
 ├── models.py         # Inherit AbstractModel
 ├── serializers.py    # DRF serializers
 ├── services.py       # Business logic (NOT in views)
-├── tasks.py          # Celery tasks (optional)
+├── tasks.py          # Celery tasks ([FULL] only)
 ├── urls.py           # Export urlpatterns
 ├── views.py          # Thin APIViews that call services
 ├── migrations/
@@ -1575,7 +2230,7 @@ class ItemService:
         return Item.objects.create(user=user, **data)
 ```
 
-### Celery task pattern
+### Celery task pattern `[FULL]`
 
 ```python
 from celery import shared_task
@@ -1733,32 +2388,37 @@ Add `stripe` to `requirements.txt`.
 
 ## Key Patterns Summary
 
-| Pattern | Convention |
-|---------|-----------|
-| Settings module | Always `project.settings`, never the project name |
-| Settings structure | Modular files in `settings/`, wildcard imports in `__init__.py` |
-| ENV access | `ENV` singleton from `environment.py`, imported by all settings files |
-| Models | Always inherit `AbstractModel` (uuid, metadata, created_at, updated_at) |
-| Views | Thin — delegate to services, return serialized responses |
-| Services | All business logic lives here, external deps injected via `__init__` |
-| URLs | Export urlpatterns from each app, aggregate in `project/urls.py` with `api/v1/` prefix |
-| Apps list | `DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS` |
-| CORS | Allow all in DEBUG, explicit origins in prod |
-| Storage | Conditional R2/local based on `USE_R2_STORAGE` env flag |
-| Celery | `PROCESS_TASKS_ASYNC` flag for synchronous testing |
-| Redis SSL | Auto-detect `rediss://` prefix, set `ssl_cert_reqs=CERT_NONE` for Heroku |
-| Prod security | SSL redirect, XSS filter, nosniff — only when `not DEBUG` |
-| Admin theme | django-admin-interface, portable via `dumpdata`/`loaddata` |
-| Port mapping | Container always 8000, host port varies per project |
-| All commands | Via Makefile -> `docker compose exec`, never run Python directly |
-| Deployment | Heroku with Procfile release phase (migrate + collectstatic) |
+| Pattern | Convention | Tier |
+|---------|-----------|------|
+| Settings module | Always `project.settings`, never the project name | ALL |
+| Settings structure | Modular files in `settings/`, wildcard imports in `__init__.py` | ALL |
+| ENV access | `ENV` singleton from `environment.py`, imported by all settings files | ALL |
+| Models | Always inherit `AbstractModel` (uuid, metadata, created_at, updated_at) | ALL |
+| Views | Thin — delegate to services, return serialized responses | ALL |
+| Services | All business logic lives here, external deps injected via `__init__` | ALL |
+| URLs | Export urlpatterns from each app, aggregate in `project/urls.py` with `api/v1/` prefix | ALL |
+| Apps list | `DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS` | ALL |
+| CORS | Allow all in DEBUG, explicit origins in prod | ALL |
+| Prod security | SSL redirect, XSS filter, nosniff — only when `not DEBUG` | ALL |
+| Admin theme | django-admin-interface, portable via `dumpdata`/`loaddata` | ALL |
+| Port mapping | Container always 8000, host port varies per project | ALL |
+| All commands | Via Makefile -> `docker compose exec`, never run Python directly | ALL |
+| Storage | Conditional R2/local based on `USE_R2_STORAGE` env flag | FULL |
+| Redis cache | Redis backend, cache-based sessions | STANDARD+ |
+| JWT auth | simplejwt with custom User model | STANDARD+ |
+| Sentry | Error tracking with tier-appropriate integrations | STANDARD+ |
+| Celery | `PROCESS_TASKS_ASYNC` flag for synchronous testing | FULL |
+| Redis SSL | Auto-detect `rediss://` prefix, set `ssl_cert_reqs=CERT_NONE` for Heroku | STANDARD+ |
+| Deployment | Heroku with Procfile release phase (migrate + collectstatic) | FULL |
 
 ---
 
 ## Post-Bootstrap Checklist
 
+### All tiers
+
 1. Create service directory, init git
-2. Generate all files from templates above, replacing placeholders
+2. Generate all files from templates above (respecting blueprint tier), replacing placeholders
 3. Copy `.env.example` to `.env`
 4. Verify Docker files exist: `Dockerfile.dev`, `docker-compose.yml`, `Makefile`, `docker/entrypoint.sh`, `docker/wait-for-it.sh`
 5. `make build && make up`
@@ -1769,3 +2429,47 @@ Add `stripe` to `requirements.txt`.
 10. Add app to `LOCAL_APPS` in `settings/apps.py`
 11. Create models inheriting `AbstractModel`
 12. `make makemigrations && make migrate`
+
+### Standard+ additional steps
+
+13. Verify Redis is running: `make ps` should show the redis container
+14. Verify JWT auth works: create a user and obtain tokens via API
+
+### Full additional steps
+
+15. Verify Celery worker is running: `make logs-celery` should show worker ready
+16. Verify Celery Beat is running: `make logs-beat` should show beat scheduler started
+17. Test a debug task if needed
+
+---
+
+## Upgrading Between Tiers
+
+### Minimal → Standard (add auth + Redis + Sentry)
+
+1. **Install packages**: add `djangorestframework-simplejwt`, `redis`, `sentry-sdk`, `django-storages[boto3]` to `requirements.txt`
+2. **Create `access/` app**: copy the `[STANDARD+]` access app files (User model, admin, apps, urls, `migrations/__init__.py`)
+3. **Add settings files**: create `settings/sentry.py` from the `[STANDARD]` template
+4. **Update existing settings**:
+   - `settings/apps.py`: add `rest_framework_simplejwt`, `rest_framework_simplejwt.token_blacklist`, `storages` to `THIRD_PARTY_APPS` and `access` to `LOCAL_APPS`
+   - `settings/cache.py`: replace LocMemCache with Redis backend, switch `SESSION_ENGINE` to `django.contrib.sessions.backends.cache`, add `SESSION_CACHE_ALIAS`, add `REDIS_URL`/`REDIS_SSL` config
+   - `settings/auth.py`: add `AUTH_USER_MODEL = "access.User"`, add JWT authentication class, switch default permission to `IsAuthenticated`, add `SIMPLE_JWT` config
+   - `settings/__init__.py`: add `from .sentry import *`
+5. **Update Docker**: add `redis` service to `docker-compose.yml`, add `redis` to web's `depends_on`, add `redis_data` volume
+6. **Update `.env`**: add `REDIS_URL`, `JWT_ACCESS_TOKEN_LIFETIME_MINUTES`, `JWT_REFRESH_TOKEN_LIFETIME_DAYS`, `SENTRY_DSN` variables
+7. **Run**: `make build && make up && make migrate`
+
+### Standard → Full (add Celery + cloud services)
+
+1. **Install packages**: add `celery[redis]`, `boto3`, `requests` to `requirements.txt`
+2. **Create files**: `project/worker.py`, `settings/aws.py`, `settings/worker.py`, `settings/email.py`, `project/services/__init__.py`, `project/services/storage.py`, `project/services/email.py`, `project/services/discord.py`
+3. **Update `project/__init__.py`**: add `from .worker import app as celery_app` and `__all__ = ("celery_app",)`
+4. **Update `settings/__init__.py`**: add `from .aws import *`, `from .worker import *`, `from .email import *` imports
+5. **Update `settings/storage.py`**: add R2 conditional logic (import from `.aws`, add `if USE_R2_STORAGE and R2_ACCESS_KEY_ID:` block)
+6. **Update `settings/sentry.py`**: add `CeleryIntegration` and `RedisIntegration` imports and integrations
+7. **Update `settings/logging.py`**: add `"celery"` logger entry
+8. **Update Docker**: add `celery`, `celery-beat` services to `docker-compose.yml`
+9. **Update Makefile**: add celery section (`celery`, `celery-beat`, `celery-purge`, `celery-restart` targets), add `logs-celery`/`logs-beat` targets, add heroku section
+10. **Update Procfile**: add `worker` and `beat` entries
+11. **Update `.env`**: add `CELERY_BROKER_URL`, `PROCESS_TASKS_ASYNC`, `USE_R2_STORAGE`, `R2_*`, `EMAIL_*` variables
+12. **Run**: `make build && make up`
