@@ -5,19 +5,26 @@ End-to-end workflow for implementing a feature from plan to merged code.
 
 ## Steps
 
-### 1. Plan
+### 1. Product Definition (optional, for UI-heavy features)
+If the feature has a user-facing interface:
+- Run `/prd` to formalize requirements into a structured PRD
+- Run `/ux-spec` to design the experience through 6 UX passes (mental model, IA, affordances, cognitive load, state design, flow integrity)
+- Skip this step for backend-only or technical features
+
+### 2. Plan
 - Use the `planner` agent
 - Skills loaded: `plan-and-scope`, `phase-breakdown`
+- The planner will consume PRD and UX spec artifacts if they exist
 - Output: `plan.md` with phased tasks
 - Review and iterate on the plan before proceeding
 
-### 1b. Scaffold (new projects only)
+### 2b. Scaffold (new projects only)
 If this is a new project with sub-repos to create:
 - Use `/scaffold` from the root planning folder
 - Creates sub-project directories, git inits, installs profiles
 - Skip this step for features in existing repos
 
-### 2. Execute — MVP Build
+### 3. Execute — MVP Build
 
 For initial builds where you're taking a plan from zero to working application, work directly on main. No branches or worktrees needed — there's nothing to protect yet.
 
@@ -45,7 +52,7 @@ Repeat for each phase:
 - Run `/autopilot` — executes all phases: implement → test → verify → commit
 - Stops on FAIL — fix issues and run `/autopilot N` to resume
 
-### 3. Execute — Ongoing Feature Work
+### 4. Execute — Ongoing Feature Work
 
 Once you have a working application and are building new features on top of it:
 

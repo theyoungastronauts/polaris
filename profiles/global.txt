@@ -7,6 +7,11 @@ skills/planning/phase-breakdown.md
 skills/planning/brainstorming.md
 cmd:scaffold=skills/planning/scaffold.md
 
+# UX & product definition (on-demand)
+cmd:prd=skills/ux/prd.md
+cmd:ux-spec=skills/ux/ux-spec.md
+cmd:ux-to-prompts=skills/ux/ux-to-prompts.md
+
 # Execution & verification (on-demand)
 cmd:execute=skills/execution/execute-phase.md
 cmd:verify=skills/verification/verify-phase.md

@@ -12,6 +12,8 @@ At the start of any new feature, refactor, or project. Always plan before execut
 - What is the end-user outcome?
 - What are the constraints (time, tech, compatibility)?
 - What already exists that we're building on?
+- If a PRD exists (`*-prd.md`), read it — scope and goals are already defined. Focus on dependencies, risks, and phasing.
+- If a UX spec exists (`*-ux-spec.md`), read it — reference states, flows, and affordances when defining phase tasks.
 
 ### 2. Define the Scope
 - List what IS in scope (be specific)

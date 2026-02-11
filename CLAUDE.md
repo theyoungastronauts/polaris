@@ -7,6 +7,7 @@ This is a skills/agents/workflows repository for Claude Code. It gets installed 
 ```
 skills/          Markdown instruction files Claude loads for guidance
   planning/      Plan creation, scoping, brainstorming
+  ux/            Product requirements, UX specification
   execution/     Stack-specific patterns (Django, Next.js, Flutter, React, Tailwind)
   verification/  Code review checklists per framework
   writing/       Prose quality, AI antipatterns

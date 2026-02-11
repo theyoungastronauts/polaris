@@ -56,7 +56,10 @@ The document should cover:
 
 Commit the design document, then suggest:
 
-> "Design doc is saved. When you're ready, use `/scaffold` to create the project structure, then start a new session to plan the implementation phases."
+> "Design doc is saved. Next steps:
+> - **Product formalization needed:** Run `/prd` to structure requirements.
+> - **UI-heavy feature:** Run `/ux-spec` to design the experience.
+> - **Ready to build:** Use `/scaffold` to create the project structure, then plan the implementation phases."
 
 ## Key Principles
 

@@ -49,7 +49,9 @@ Start by understanding the current project context, then ask questions one at a 
 
 After committing the design doc, suggest:
 
-> "Design is saved. When you're ready to turn this into a phased implementation plan, start a new session with the planner agent — it will read this design doc and break it into scoped, executable phases."
+> "Design is saved. Next steps depend on what you're building:
+> - **Product/UX-heavy feature:** Run `/prd` to formalize requirements, then `/ux-spec` for UX foundations before planning.
+> - **Technical/backend feature:** Start a new session with the planner agent to break this into implementation phases."
 
 ## Key Principles
 

@@ -33,6 +33,12 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] Answer clarifying questions as the agent distills the artifacts
 - [ ] Design doc saved to `docs/plans/YYYY-MM-DD-<topic>-design.md`
 
+### 1b. Product Definition (optional, for UI features)
+
+- [ ] `/prd` — formalize requirements into a structured PRD
+- [ ] `/ux-spec` — run 6 UX passes (mental model, IA, affordances, cognitive load, states, flow integrity)
+- [ ] Skip for backend-only features
+
 ### 2. Scaffold
 
 - [ ] In the same session: "Let's scaffold the project using /scaffold"
@@ -42,8 +48,8 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 ### 3. Plan
 
 - [ ] Start a **new** Claude session
-- [ ] "Turn the design into a phased implementation plan"
-- [ ] The planner can now reference real project structure, installed packages, and boilerplate
+- [ ] "Turn the design docs in docs/plans/ into a phased implementation plan"
+- [ ] The planner reads the most structured artifact available: UX spec > PRD > brainstorm doc
 - [ ] Review phases — small enough to review individually? Dependencies flow forward?
 - [ ] `plan.md` saved to project root
 

@@ -36,6 +36,9 @@ polaris project --stack django:api --stack nextjs:client
 # Add project-specific extras
 polaris project --stack django --extra skills/misc/vfx.md
 
+# Wipe existing skills and reinstall (switching stacks or starting fresh)
+polaris project --clean --stack django --stack nextjs
+
 # Check what's installed and if updates are available
 polaris status
 ```
@@ -52,6 +55,7 @@ polaris/
 │   ├── verification/       # Code review checklists per framework
 │   ├── writing/            # Clear writing, AI antipatterns
 │   ├── meta/               # Skills for authoring new skills
+│   ├── ux/                 # Product requirements, UX specification
 │   ├── git/                # Commit and PR conventions
 │   └── misc/               # Project-specific skills (not in any profile)
 ├── agents/
@@ -100,6 +104,9 @@ Some heavy reference docs are installed as slash commands instead of always-load
 
 | Command | What | Profiles |
 |---------|------|----------|
+| `/prd` | Generate and refine a product requirements document | global |
+| `/ux-spec` | Create UX specification through 6 designer-mindset passes | global |
+| `/ux-to-prompts` | Transform UX spec into build-order prompts for UI tools | global |
 | `/execute` | Execute a phase of the plan | global |
 | `/verify` | Verify a completed phase against the plan | global |
 | `/autopilot` | Autonomous phase execution (execute → test → verify → commit loop) | global |
@@ -125,11 +132,12 @@ See [USAGE.md](USAGE.md) for the complete walkthrough, or [QUICKSTART.md](QUICKS
 **New project (MVP build):**
 
 1. **Brainstorm** — Shape the idea in a root project folder
-2. **Plan** — Turn the design into a phased implementation plan
-3. **Scaffold** — Create sub-project repos and install profiles
-4. **Execute** — Implement each phase on main with the executor agent
-5. **Review** — Verify each phase with the reviewer agent
-6. **Repeat** — Move through phases until the MVP is complete
+2. **Define** (optional) — Run `/prd` to formalize requirements, `/ux-spec` for UX foundations
+3. **Plan** — Turn the design into a phased implementation plan
+4. **Scaffold** — Create sub-project repos and install profiles
+5. **Execute** — Implement each phase on main with the executor agent
+6. **Review** — Verify each phase with the reviewer agent
+7. **Repeat** — Move through phases until the MVP is complete
 
 Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases automatically and stops on failure.
 

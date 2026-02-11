@@ -36,6 +36,18 @@ polaris project --stack django --stack nextjs
 
 This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). Stacks are composable — select a backend and one or more frontends. The `nextjs` stack installs `/react` and `/tailwind` as on-demand commands to keep context light.
 
+**If the project already has a `.claude/` directory** (from a previous Polaris install, manual setup, or another tool), use `--clean` to wipe existing skills before installing:
+
+```bash
+# Remove existing Polaris files and reinstall with new stacks
+polaris project --clean --stack django --stack nextjs
+
+# Also replace CLAUDE.md with a fresh defaults template
+polaris project --clean --fresh --stack django --stack nextjs
+```
+
+`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `workflows/`, `templates/`, `commands/`). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created.
+
 Skip to Step 3 (Execute) if you already have a plan, or Step 1 if you want to brainstorm first.
 
 ### CLAUDE.md (auto-generated)
@@ -94,16 +106,71 @@ Claude will follow the brainstorming skill:
 
 ---
 
+## Step 1b: Product Definition (optional)
+
+For features with a user-facing interface, formalize requirements and design the UX before planning. Skip this step for backend-only or technical features.
+
+### Generate a PRD
+
+If you need to structure requirements beyond what the brainstorm captured:
+
+```
+You: /prd
+```
+
+Claude will follow the PRD skill to:
+
+1. Generate a structured PRD with 7 sections (problem, demo goal, target user, core use case, functional decisions, UX decisions, data & logic)
+2. Ask you for a clarification depth (5/10/20/35 questions)
+3. Run an adaptive clarification pass, refining the PRD through targeted questions
+
+**Output:** A PRD saved to `docs/plans/{topic}-prd.md`.
+
+### Create a UX Specification
+
+If the feature needs deliberate UX design:
+
+```
+You: /ux-spec
+```
+
+Claude will run 6 forced designer-mindset passes — no visual specs until all 6 are complete:
+
+1. **Mental Model** — What does the user think is happening?
+2. **Information Architecture** — What exists, how is it organized?
+3. **Affordances** — What actions are obvious without explanation?
+4. **Cognitive Load** — Where will the user hesitate?
+5. **State Design** — How does the system talk back? (empty, loading, success, error)
+6. **Flow Integrity** — Does this feel inevitable?
+
+Only after the passes does it produce visual specifications.
+
+**Output:** A UX spec saved to `docs/plans/{topic}-ux-spec.md`.
+
+### Optional: Build-Order Prompts
+
+If you want to feed the UX spec into external UI generation tools (v0, Bolt, Stitch):
+
+```
+You: /ux-to-prompts
+```
+
+This extracts atomic units from the UX spec, maps dependencies, and generates self-contained prompts in build order.
+
+---
+
 ## Step 2: Plan
 
-Once you have a design you're happy with, turn it into a structured implementation plan. **Start a new session** so the planner agent gets fresh context.
+Once you have a design you're happy with (and optionally a PRD and UX spec), turn it into a structured implementation plan. **Start a new session** so the planner agent gets fresh context.
 
 **Start the session:**
 
 ```
-You: Turn the brainstorm in docs/plans/[your-brainstorm].md into a phased implementation
-     plan. Use the plan-and-scope and phase-breakdown skills.
+You: Turn the design docs in docs/plans/ into a phased implementation plan.
+     Use the plan-and-scope and phase-breakdown skills.
 ```
+
+The planner will automatically read any brainstorm docs, PRDs, and UX specs it finds. If a UX spec exists, it will extract implementation tasks from the state design and flow integrity passes.
 
 Claude will produce a `plan.md` following the planning skills:
 
@@ -350,6 +417,7 @@ git worktree add ../api-billing -b feature/billing
 |------|------|-------|-------------|
 | 0 | Project setup | Root folder | `polaris global` / `polaris project` |
 | 1 | Brainstorm | Root folder | `brainstorming` skill |
+| 1b | Product definition (optional) | Root folder | `/prd` + `/ux-spec` commands |
 | 2 | Plan | Root folder (new session) | `plan-and-scope` + `phase-breakdown` skills |
 | 2b | Scaffold (new projects) | Root folder | `/scaffold` command |
 | 3 | Execute | Sub-project (on main) | `/execute` command |
