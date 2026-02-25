@@ -11,13 +11,68 @@ Use browser annotations to drive frontend fixes. Humans mark up the live page, C
 
 ## Setup
 
-Install and register with Claude Code:
+### 1. Install the package
+
 ```bash
-npm install agentation-mcp
+npm install agentation -D
+```
+
+### 2. Add the browser component
+
+**React / Next.js** — in your root layout (e.g., `src/app/layout.tsx`):
+
+```tsx
+import { Agentation } from "agentation";
+
+// Inside <body>, after your content:
+{process.env.NODE_ENV === "development" && <Agentation />}
+```
+
+**Astro** — create a React island wrapper:
+
+```tsx
+// src/components/dev/AgentationOverlay.tsx
+import { Agentation } from "agentation";
+export default function AgentationOverlay() {
+  return <Agentation />;
+}
+```
+
+Then include in your base layout (e.g., `src/layouts/BaseLayout.astro`):
+
+```astro
+---
+import AgentationOverlay from '@/components/dev/AgentationOverlay.tsx';
+---
+<!-- Inside <body>, after <Footer /> -->
+{import.meta.env.DEV && <AgentationOverlay client:only="react" />}
+```
+
+Astro requires `@astrojs/react`, `react`, and `react-dom` as dependencies.
+
+### 3. Configure MCP
+
+**Option A — project `.mcp.json`** (recommended, shared with team):
+
+```json
+{
+  "mcpServers": {
+    "agentation": {
+      "command": "npx",
+      "args": ["agentation-mcp", "server"]
+    }
+  }
+}
+```
+
+**Option B — per-user CLI:**
+
+```bash
 claude mcp add agentation -- npx agentation-mcp server
 ```
 
-Verify configuration:
+### 4. Verify
+
 ```bash
 npx agentation-mcp doctor
 ```

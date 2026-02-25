@@ -48,6 +48,7 @@ Options:
   --force, -f           Overwrite local modifications
   --fresh               Replace CLAUDE.md with defaults template + skills
   --clean               Remove existing Polaris files before reinstalling
+  --standalone          Default stack directories to "." (repo root is the stack)
   --no-claude-md        Skip CLAUDE.md generation
 
 Examples:
@@ -59,6 +60,7 @@ Examples:
   ./install.sh project                                  # interactive stack selection
   ./install.sh project --stack django --stack nextjs     # non-interactive
   ./install.sh project --stack django:api --stack nextjs:client
+  ./install.sh project --stack django --standalone              # standalone repo (dir = ".")
   ./install.sh project --clean --stack django --stack nextjs  # wipe and reinstall
   ./install.sh project --clean --fresh --stack django         # wipe and fresh CLAUDE.md
   ./install.sh project --profile django                  # legacy single-profile mode
@@ -634,7 +636,9 @@ _interactive_select() {
             if [[ $idx -ge 0 && $idx -lt ${#backends[@]} ]]; then
                 local bname="${backends[$idx]}"
                 _read_profile_metadata "$SKILLS_REPO/profiles/${bname}.txt"
-                _set_stack_dir "$bname" "$_STACK_DIRECTORY"
+                local _dir="$_STACK_DIRECTORY"
+                [[ "$STANDALONE" == "true" ]] && _dir="."
+                _set_stack_dir "$bname" "$_dir"
             else
                 err "Invalid selection"
                 exit 1
@@ -660,7 +664,9 @@ _interactive_select() {
                 if [[ $idx -ge 0 && $idx -lt ${#frontends[@]} ]]; then
                     local fname="${frontends[$idx]}"
                     _read_profile_metadata "$SKILLS_REPO/profiles/${fname}.txt"
-                    _set_stack_dir "$fname" "$_STACK_DIRECTORY"
+                    local _dir="$_STACK_DIRECTORY"
+                    [[ "$STANDALONE" == "true" ]] && _dir="."
+                    _set_stack_dir "$fname" "$_dir"
                 else
                     warn "Skipping invalid selection: $choice"
                 fi
@@ -1315,8 +1321,12 @@ cmd_new() {
         local i
         for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
             if [[ -z "${STACK_DIRS[$i]}" ]]; then
-                _read_profile_metadata "$SKILLS_REPO/profiles/${STACK_NAMES[$i]}.txt"
-                STACK_DIRS[$i]="$_STACK_DIRECTORY"
+                if [[ "$STANDALONE" == "true" ]]; then
+                    STACK_DIRS[$i]="."
+                else
+                    _read_profile_metadata "$SKILLS_REPO/profiles/${STACK_NAMES[$i]}.txt"
+                    STACK_DIRS[$i]="$_STACK_DIRECTORY"
+                fi
             fi
         done
     fi
@@ -1387,8 +1397,12 @@ cmd_project() {
         local i
         for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
             if [[ -z "${STACK_DIRS[$i]}" ]]; then
-                _read_profile_metadata "$SKILLS_REPO/profiles/${STACK_NAMES[$i]}.txt"
-                STACK_DIRS[$i]="$_STACK_DIRECTORY"
+                if [[ "$STANDALONE" == "true" ]]; then
+                    STACK_DIRS[$i]="."
+                else
+                    _read_profile_metadata "$SKILLS_REPO/profiles/${STACK_NAMES[$i]}.txt"
+                    STACK_DIRS[$i]="$_STACK_DIRECTORY"
+                fi
             fi
         done
         _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "$fresh" "${extras[@]+"${extras[@]}"}"
@@ -1572,6 +1586,7 @@ FORCE="false"
 FRESH="false"
 CLEAN="false"
 NO_CLAUDE_MD="false"
+STANDALONE="false"
 PROFILE=""
 TARGET=""
 NEW_PATH=""
@@ -1606,6 +1621,7 @@ while [[ $# -gt 0 ]]; do
         --fresh)          FRESH="true"; shift ;;
         --clean)          CLEAN="true"; shift ;;
         --no-claude-md)   NO_CLAUDE_MD="true"; shift ;;
+        --standalone)     STANDALONE="true"; shift ;;
         *)                err "Unknown option: $1"; usage ;;
     esac
 done

@@ -1,0 +1,14 @@
+# stack: frontend
+# label: Astro
+# directory: landing
+#
+# Astro static site / landing page skills
+
+skills/execution/astro-patterns.md
+skills/verification/verify-astro.md
+agents/executor.md
+
+# On-demand reference docs (invoke with /astro-bootstrap or /tailwind)
+cmd:astro-bootstrap=skills/execution/astro-bootstrap.md
+cmd:tailwind=skills/execution/tailwind-v4-design-system.md
+cmd:visual-feedback=skills/execution/visual-feedback.md

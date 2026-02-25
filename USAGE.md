@@ -34,6 +34,13 @@ polaris project
 polaris project --stack django --stack nextjs
 ```
 
+**If the repo is a standalone stack** (not a monorepo with subdirectories), use `--standalone` to default the stack directory to `.` instead of the profile default (`server`, `web`, etc.):
+
+```bash
+cd ~/prj/my-backend-api
+polaris project --stack django --standalone
+```
+
 This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). Stacks are composable — select a backend and one or more frontends. The `nextjs` stack installs `/react` and `/tailwind` as on-demand commands to keep context light.
 
 **If the project already has a `.claude/` directory** (from a previous Polaris install, manual setup, or another tool), use `--clean` to wipe existing skills before installing:
@@ -439,4 +446,5 @@ git worktree add ../api-billing -b feature/billing
 - **Integration summaries are contracts.** If the backend changes, update the summary before the frontend consumes it.
 - **Use `/compact` in Claude Code** when context gets heavy during long execution phases.
 - **Use `/react` or `/tailwind` when you need them.** These are on-demand commands — they only load into context when invoked, keeping your baseline token usage low.
+- **Use `/visual-feedback` for UI iteration.** Install [Agentation](https://agentation.dev) in your project, and humans can annotate the live page in the browser while Claude picks up fixes via MCP. The bootstrap skills offer this as an optional step, or invoke `/visual-feedback` for the workflow.
 - **When in doubt, check the skills.** They're in `.claude/skills/` and `.claude/agents/` — read them if you forget the conventions.

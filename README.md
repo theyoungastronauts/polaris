@@ -33,6 +33,9 @@ polaris project --stack django --stack nextjs
 # Override default directories
 polaris project --stack django:api --stack nextjs:client
 
+# Standalone repo (not a monorepo) — defaults directory to "."
+polaris project --stack django --standalone
+
 # Add project-specific extras
 polaris project --stack django --extra skills/misc/vfx.md
 
@@ -51,7 +54,7 @@ polaris/
 ├── context-pull.sh         # Cross-repo context extraction
 ├── skills/
 │   ├── planning/           # Plan creation, phase breakdown, brainstorming
-│   ├── execution/          # Stack-specific patterns (Django, Next.js, Flutter, Tailwind, React)
+│   ├── execution/          # Stack-specific patterns (Django, Next.js, Flutter, Astro, Tailwind, React)
 │   ├── verification/       # Code review checklists per framework
 │   ├── writing/            # Clear writing, AI antipatterns
 │   ├── meta/               # Skills for authoring new skills
@@ -72,6 +75,7 @@ polaris/
     ├── django.txt          # Backend stack (+ django.claude.md snippet)
     ├── nextjs.txt          # Frontend stack (+ nextjs.claude.md snippet)
     ├── flutter.txt         # Frontend stack (+ flutter.claude.md snippet)
+    ├── astro.txt           # Frontend stack (+ astro.claude.md snippet)
     └── _multi-stack.txt    # Auto-added for multi-stack installs
 ```
 
@@ -97,6 +101,7 @@ Stacks are composable — select a backend and one or more frontends during `pol
 | `django` | backend | Django/DRF backend |
 | `nextjs` | frontend | Next.js frontend |
 | `flutter` | frontend | Flutter mobile/web app |
+| `astro` | frontend | Astro landing page / marketing site |
 
 ## On-Demand Commands
 
@@ -115,6 +120,8 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/tailwind` | Tailwind v4 design system | nextjs |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
+| `/astro-bootstrap` | Astro project scaffolding (Tailwind v4, DaisyUI, landing page) | astro |
+| `/visual-feedback` | Agentation MCP workflow for browser-annotated UI fixes | nextjs, astro |
 
 Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of the default location:
 
@@ -123,6 +130,8 @@ cmd:react=skills/execution/react-best-practices.md
 cmd:tailwind=skills/execution/tailwind-v4-design-system.md
 cmd:django-bootstrap=skills/execution/django-bootstrap.md
 cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
+cmd:astro-bootstrap=skills/execution/astro-bootstrap.md
+cmd:visual-feedback=skills/execution/visual-feedback.md
 ```
 
 ## Workflow

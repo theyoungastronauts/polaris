@@ -19,6 +19,7 @@ Ask the user for these values:
 | `{domain}` | Production domain | `myapp.com` |
 | `{app-title}` | Display name for metadata | `My App` |
 | **Architecture mode** | See below | Frontend-centric / SSR-centric / Combination |
+| **Include Agentation?** | Browser annotation tool for visual feedback | Yes / No |
 
 ### Architecture Modes
 
@@ -80,7 +81,8 @@ Ask the user for these values:
 ├── .gitignore
 ├── Dockerfile.dev
 ├── docker-compose.yml
-└── Makefile
+├── Makefile
+└── .mcp.json                 # If Agentation enabled
 ```
 
 ---
@@ -130,6 +132,8 @@ Ask the user for these values:
 ```
 
 **SSR-centric mode**: Also add `"@tanstack/react-query": "^5"` to dependencies.
+
+**If Agentation enabled**: Also add `"agentation": "^0"` to devDependencies.
 
 ### tsconfig.json
 
@@ -265,6 +269,21 @@ cd {app-name} && npx lint-staged
 
 Make this file executable: `chmod +x .husky/pre-commit`
 
+### .mcp.json (if Agentation enabled)
+
+Only generate this file if the user opted into Agentation.
+
+```json
+{
+  "mcpServers": {
+    "agentation": {
+      "command": "npx",
+      "args": ["agentation-mcp", "server"]
+    }
+  }
+}
+```
+
 ### src/app/globals.css
 
 ```css
@@ -336,6 +355,15 @@ export default function RootLayout({
     </html>
   );
 }
+```
+
+**If Agentation enabled**: Add the import and component inside `<body>`, before the closing `</body>`:
+
+```tsx
+import { Agentation } from "agentation";
+
+// Add after the content </div>, before </body>:
+{process.env.NODE_ENV === "development" && <Agentation />}
 ```
 
 ### src/lib/api.ts
@@ -1386,4 +1414,5 @@ build-next:
 7. `make lint` — should pass cleanly
 8. `make typecheck` — should pass cleanly
 9. For frontend-centric: verify login page renders at `/login`
-10. Commit initial scaffold
+10. If Agentation: verify `.mcp.json` exists at project root
+11. Commit initial scaffold
