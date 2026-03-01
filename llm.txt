@@ -1,0 +1,186 @@
+# Polaris — llm.txt
+
+> A modular skills/agents/workflows system for AI-assisted development with Claude Code.
+> This file is a concise reference for AI agents. For full details, see the linked files.
+
+## What Polaris Is
+
+Polaris is a collection of **markdown instruction files** (no runtime code) that guide Claude Code through structured planning, execution, and verification of software projects. It installs into Claude's config directories so skills are automatically available in sessions.
+
+Files are **copied** (not symlinked) so projects work independently. A checksum system detects stale installs.
+
+## Repository Structure
+
+```
+install.sh              Installer (init, global, project, status, new)
+context-pull.sh         Extracts Django backend context for frontend sessions
+skills/
+  planning/             Brainstorming, plan-and-scope, phase-breakdown, scaffold
+  ux/                   PRD, UX spec, UX-to-prompts
+  execution/            Stack patterns + bootstrap (Django, Next.js, Flutter, Astro)
+                        Also: execute-phase, autopilot, cross-repo-context, visual-feedback,
+                        react-best-practices, tailwind-v4-design-system
+  verification/         verify-phase + per-stack checklists (Django, Next.js, Flutter, Astro)
+  writing/              Clear writing guidelines
+  meta/                 Writing new skills, session reflection
+  git/                  Commit conventions, worktrees
+agents/                 planner, executor, reviewer, integrator, design-intake
+workflows/              full-feature.md (end-to-end workflow)
+templates/              integration-summary.md (API contract template)
+profiles/               Stack manifests (.txt) + CLAUDE.md snippets (.claude.md)
+```
+
+## Installation
+
+```bash
+# First-time setup
+./install.sh init          # Saves repo path, adds `polaris` shell alias, merges settings
+source ~/.zshrc
+polaris global --fresh     # Install global skills + developer defaults to ~/.claude/
+
+# Per-project (interactive or explicit)
+cd ~/prj/my-app
+polaris project --stack django --stack nextjs
+polaris project --stack django --standalone   # Single-stack repo (directory = ".")
+polaris project --clean --stack django        # Wipe and reinstall
+
+# Check for stale files
+polaris status
+
+# Create new project (interactive stack selection + brainstorm launch)
+polaris new ~/prj/my-app
+```
+
+**What install does:** Copies skills/agents into `~/.claude/` (global) or `.claude/` (project). Generates CLAUDE.md with references to installed files between `<!-- polaris:start/end -->` markers. Merges tool permissions and LSP config into `~/.claude/settings.json`.
+
+## Profiles (Composable Stacks)
+
+Select a backend + 0..N frontends. Each profile lists which skills to install.
+
+| Profile | Type | Default Dir | Details |
+|---------|------|-------------|---------|
+| `global` | — | `~/.claude/` | Planning, writing, git, meta skills + agents |
+| `django` | backend | `server` | Django/DRF patterns + verification |
+| `nextjs` | frontend | `web` | Next.js + React/Tailwind as on-demand commands |
+| `flutter` | frontend | `mobile` | Flutter patterns + verification |
+| `astro` | frontend | `web` | Astro patterns + verification |
+
+Multi-stack installs auto-add `_multi-stack.txt` (integrator agent, cross-repo-context, integration summary template).
+
+**Profile format** (`profiles/*.txt`):
+```
+# stack: backend|frontend
+# label: Display Name
+# directory: default-dir
+
+skills/execution/django-patterns.md          # Always loaded
+cmd:django-bootstrap=skills/execution/django-bootstrap.md  # On-demand /django-bootstrap
+```
+
+## Skills Overview
+
+Skills are self-contained markdown files. No dependencies between skills.
+
+**Planning:** Brainstorming (guided ideation) → Plan and Scope (goals, scope in/out, risks) → Phase Breakdown (small phases, parallel groups, sync points) → Scaffold (create project from plan).
+
+**UX:** PRD (7-section product requirements) → UX Spec (6 forced design passes: mental model, IA, affordances, cognitive load, states, flow integrity) → UX-to-Prompts (build-order prompts for UI tools like v0/Bolt).
+
+**Execution:** Execute Phase (plan mode → explore → implement → test → summarize). Stack patterns define conventions per framework. Bootstrap skills scaffold new projects. Autopilot loops execute → test → verify → commit across all phases.
+
+**Verification:** Verify Phase (tests, plan match, security, code quality, scope). Per-stack checklists add framework-specific checks.
+
+**Other:** Writing clearly, commit conventions, worktrees, cross-repo context, visual-feedback (browser-annotated UI fixes via Agentation MCP), session reflection, meta skill for authoring new skills.
+
+→ Detailed skill files: `skills/` subdirectories
+
+## Agents
+
+| Agent | Role | Input | Output |
+|-------|------|-------|--------|
+| **planner** | Design → phased plan | Design docs in `docs/plans/` | `plan.md` |
+| **executor** | Implement a single phase | `plan.md` + assigned phase | Code on branch + integration summary |
+| **reviewer** | Verify completed phase | `plan.md` + recent changes | Verification report (PASS/WARN/FAIL) |
+| **integrator** | Bridge backend↔frontend | Backend code | Integration summary (API contracts) |
+| **design-intake** | Distill design artifacts | Files in `docs/design/` | Structured design doc |
+
+→ Detailed agent files: `agents/`
+
+## On-Demand Slash Commands
+
+Installed to `.claude/commands/` — only loaded when invoked.
+
+| Command | Purpose |
+|---------|---------|
+| `/prd` | Generate product requirements document |
+| `/ux-spec` | Create UX specification (6 design passes) |
+| `/ux-to-prompts` | UX spec → build-order prompts for UI tools |
+| `/execute` | Execute a phase of the plan |
+| `/verify` | Verify a completed phase |
+| `/autopilot` | Autonomous phase loop (execute → test → verify → commit) |
+| `/scaffold` | Create project from plan |
+| `/reflect` | Session reflection/retrospective |
+| `/django-bootstrap` | Scaffold Django project |
+| `/nextjs-bootstrap` | Scaffold Next.js project |
+| `/flutter-bootstrap` | Scaffold Flutter project |
+| `/astro-bootstrap` | Scaffold Astro project |
+| `/react` | React best practices reference |
+| `/tailwind` | Tailwind v4 + DaisyUI patterns |
+| `/visual-feedback` | Browser-annotated UI fix workflow |
+
+## Core Workflow
+
+**New project (MVP):**
+
+1. **Brainstorm** — Shape the idea conversationally → `docs/plans/*-brainstorm.md`
+2. **Define** (optional, UI features) — `/prd` → `/ux-spec` for structured requirements
+3. **Plan** (new session) — Planner agent → `plan.md` with phased implementation
+4. **Scaffold** — `/scaffold` creates sub-project dirs, git inits, installs profiles
+5. **Execute + Verify** (per phase, separate sessions):
+   - `/execute` — Implements phase on main
+   - `/verify` — Reviews in fresh session, produces PASS/WARN/FAIL report
+   - Fix FAILs, move to next phase
+   - OR: `/autopilot` for hands-off loop through all phases
+6. **Cross-repo handoff** — Backend generates integration summary → frontend pulls context via `context-pull.sh`
+
+**Ongoing development:**
+- Single feature: branch → `/execute` → `/verify` → PR → merge
+- Parallel features: git worktrees for isolated workspaces
+
+→ Full walkthrough: `USAGE.md`
+→ Cheat sheet: `QUICKSTART.md`
+→ Workflow doc: `workflows/full-feature.md`
+
+## Cross-Repo Context
+
+For full-stack projects with separate backend/frontend repos:
+
+```bash
+# From frontend repo, pull backend context
+~/prj/polaris/context-pull.sh ../backend-api
+# Creates .claude/backend-context.md (models, serializers, views, URLs)
+```
+
+Backend phases generate integration summaries (`docs/integration/[feature].md`) documenting endpoints, request/response shapes, auth, and error codes. Frontend phases consume these as contracts.
+
+→ Details: `skills/execution/cross-repo-context.md`, `templates/integration-summary.md`
+
+## Key Principles
+
+- **Plan before code.** Brainstorm → plan → execute. A bad plan compounds into bad code.
+- **Small phases.** Each phase should be reviewable in one sitting (1–3 hours of execution).
+- **Verify separately.** Fresh session = fresh eyes. Don't verify in the session that wrote the code.
+- **Tests alongside implementation.** Not after.
+- **Commits are atomic.** One logical change per commit, imperative tense, body explains why.
+- **Integration summaries are contracts.** Update when backend changes, consume before frontend builds.
+- **On-demand commands keep context light.** Heavy reference docs load only when invoked.
+
+## Extending Polaris
+
+- **Add a skill:** Create `.md` in appropriate `skills/` subdir → add to relevant `profiles/*.txt`
+- **Add a profile:** Create `profiles/<name>.txt` with metadata headers + file list → create companion `profiles/<name>.claude.md`
+- **Add an on-demand command:** Use `cmd:name=path` in a profile
+- **Add an agent:** Create `.md` in `agents/`
+- **Project-specific extras:** `polaris project --extra skills/misc/my-skill.md`
+
+→ Skill authoring guide: `skills/meta/writing-skills.md`
+→ Repo conventions: `CLAUDE.md`
