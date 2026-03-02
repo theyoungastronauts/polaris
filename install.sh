@@ -105,7 +105,14 @@ REQUIRED_SETTINGS='
       "Task",
       "WebFetch",
       "WebSearch",
-      "Bash"
+      "Bash",
+      "mcp__axon__axon_query",
+      "mcp__axon__axon_context",
+      "mcp__axon__axon_impact",
+      "mcp__axon__axon_dead_code",
+      "mcp__axon__axon_detect_changes",
+      "mcp__axon__axon_list_repos",
+      "mcp__axon__axon_cypher"
     ],
     "deny": [
       "Bash(rm -rf /)",

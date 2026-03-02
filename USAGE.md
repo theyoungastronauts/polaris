@@ -219,7 +219,7 @@ Claude will follow the scaffold skill to:
 7. `plan.md` stays at the project root
 8. Optionally generate a VS Code workspace file
 
-After scaffolding, the project has a single `.claude/` at the root with skills for all selected stacks.
+After scaffolding, the project has a single `.claude/` at the root with skills for all selected stacks. If Axon is installed (`pip install axoniq`), the scaffold also runs initial indexing for structural code intelligence.
 
 **Skip this step** if you used Path B (existing project) or already have your repos set up.
 
@@ -447,4 +447,5 @@ git worktree add ../api-billing -b feature/billing
 - **Use `/compact` in Claude Code** when context gets heavy during long execution phases.
 - **Use `/react` or `/tailwind` when you need them.** These are on-demand commands — they only load into context when invoked, keeping your baseline token usage low.
 - **Use `/visual-feedback` for UI iteration.** Install [Agentation](https://agentation.dev) in your project, and humans can annotate the live page in the browser while Claude picks up fixes via MCP. The bootstrap skills offer this as an optional step, or invoke `/visual-feedback` for the workflow.
+- **Install Axon for structural awareness.** `pip install axoniq && axon analyze .` gives agents call graphs, impact analysis, and dead code detection. The MCP server (`axon serve --watch`) keeps the index current as you code. See `skills/execution/axon-code-intel.md`.
 - **When in doubt, check the skills.** They're in `.claude/skills/` and `.claude/agents/` — read them if you forget the conventions.

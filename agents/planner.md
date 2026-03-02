@@ -24,3 +24,4 @@ A `plan.md` file in the project root (or docs/ directory) following the plan tem
 - Flag risks and unknowns explicitly rather than burying them in tasks
 - Group phases that target different sub-projects into parallel groups when they have no cross-repo dependency
 - Use sync points between parallel groups to mark where integration summaries or other handoffs occur
+- Use Axon tools (`axon_query`, `axon_context`, `axon_impact`) to explore existing code structure and assess change risk when available

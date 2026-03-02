@@ -19,7 +19,8 @@ skills/
   ux/                   PRD, UX spec, UX-to-prompts
   execution/            Stack patterns + bootstrap (Django, Next.js, Flutter, Astro)
                         Also: execute-phase, autopilot, cross-repo-context, visual-feedback,
-                        react-best-practices, tailwind-v4-design-system
+                        react-best-practices, tailwind-v4-design-system,
+                        work-discipline, axon-code-intel
   verification/         verify-phase + per-stack checklists (Django, Next.js, Flutter, Astro)
   writing/              Clear writing guidelines
   meta/                 Writing new skills, session reflection
@@ -85,9 +86,9 @@ Skills are self-contained markdown files. No dependencies between skills.
 
 **UX:** PRD (7-section product requirements) → UX Spec (6 forced design passes: mental model, IA, affordances, cognitive load, states, flow integrity) → UX-to-Prompts (build-order prompts for UI tools like v0/Bolt).
 
-**Execution:** Execute Phase (plan mode → explore → implement → test → summarize). Stack patterns define conventions per framework. Bootstrap skills scaffold new projects. Autopilot loops execute → test → verify → commit across all phases.
+**Execution:** Execute Phase (plan mode → explore → implement → test → summarize). Work Discipline (behavioral guardrails: plan mode defaults, subagent strategy, verify-as-you-go, re-plan triggers). Axon Code Intelligence (structural analysis via knowledge graph — when/how to use call graphs, impact analysis, dead code detection during each workflow stage). Stack patterns define conventions per framework. Bootstrap skills scaffold new projects. Autopilot loops execute → test → verify → commit across all phases.
 
-**Verification:** Verify Phase (tests, plan match, security, code quality, scope). Per-stack checklists add framework-specific checks.
+**Verification:** Verify Phase (tests, plan match, security, code quality, scope). Per-stack checklists add framework-specific checks. Axon tools provide structural verification — mapping diffs to affected symbols, detecting orphaned code, confirming all call sites were updated.
 
 **Other:** Writing clearly, commit conventions, worktrees, cross-repo context, visual-feedback (browser-annotated UI fixes via Agentation MCP), session reflection, meta skill for authoring new skills.
 
@@ -163,6 +164,18 @@ For full-stack projects with separate backend/frontend repos:
 Backend phases generate integration summaries (`docs/integration/[feature].md`) documenting endpoints, request/response shapes, auth, and error codes. Frontend phases consume these as contracts.
 
 → Details: `skills/execution/cross-repo-context.md`, `templates/integration-summary.md`
+
+## Axon Integration (Code Intelligence)
+
+Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-powered structural analysis tool. If installed (`pip install axoniq`), it provides MCP tools for call graphs, impact analysis, dead code detection, and execution flow tracing.
+
+**Setup:** `axon analyze .` to index a project, then `axon serve --watch` for live re-indexing via MCP. Scaffold (`/scaffold`) auto-detects Axon and runs initial indexing.
+
+**Key tools:** `axon_query` (hybrid search), `axon_context` (360° symbol view), `axon_impact` (blast radius), `axon_dead_code` (unreachable code), `axon_detect_changes` (diff → affected symbols), `axon_cypher` (graph queries).
+
+**Workflow integration:** Planner uses Axon to explore structure and assess risk. Executor checks impact before modifying symbols. Reviewer maps diffs to affected symbols and catches orphaned code.
+
+→ Details: `skills/execution/axon-code-intel.md`
 
 ## Key Principles
 

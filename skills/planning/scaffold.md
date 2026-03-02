@@ -163,7 +163,35 @@ should not prompt the user for any bootstrap inputs.
 
 Save as `{root}/{root-name}.code-workspace`.
 
-### 7. Report Summary
+### 7. Index with Axon (if available)
+
+After bootstrapping, check if Axon is installed and index the project for structural code intelligence.
+
+```bash
+# Check if axon is available
+if command -v axon &>/dev/null; then
+    # Index each sub-project
+    axon analyze {root}/{suffix}
+    # Repeat for each sub-project
+fi
+```
+
+**If Axon is not installed**, warn the user:
+
+```
+Note: Axon (code intelligence) is not installed.
+Axon provides structural analysis (call graphs, impact analysis, dead code detection)
+that significantly improves planning and verification quality.
+
+Install with: pip install axoniq   (or: uv add axoniq)
+Then run: axon analyze .
+
+See the axon-code-intel skill for details on how agents use it.
+```
+
+Do not block scaffolding on Axon — it's a recommendation, not a requirement.
+
+### 8. Report Summary
 
 ```
 Scaffold complete:

@@ -17,6 +17,10 @@ cmd:execute=skills/execution/execute-phase.md
 cmd:verify=skills/verification/verify-phase.md
 cmd:autopilot=skills/execution/autopilot.md
 
+# Execution discipline
+skills/execution/work-discipline.md
+skills/execution/axon-code-intel.md
+
 # Writing
 skills/writing/writing-clearly.md
 

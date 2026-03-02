@@ -9,6 +9,7 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] `./install.sh init` — saves repo path, adds `polaris` alias
 - [ ] `source ~/.zshrc` — pick up the alias
 - [ ] `polaris global --fresh` — install global skills + developer defaults
+- [ ] `pip install axoniq` — (recommended) install Axon for structural code intelligence
 
 ## New Project
 
@@ -44,6 +45,7 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] In the same session: "Let's scaffold the project using /scaffold"
 - [ ] Confirm the scaffold plan (stacks, directory names)
 - [ ] Claude creates subdirectories, git inits, bootstraps
+- [ ] If Axon is installed, initial index runs automatically
 
 ### 3. Plan
 

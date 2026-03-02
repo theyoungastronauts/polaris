@@ -54,7 +54,7 @@ polaris/
 ├── context-pull.sh         # Cross-repo context extraction
 ├── skills/
 │   ├── planning/           # Plan creation, phase breakdown, brainstorming
-│   ├── execution/          # Stack-specific patterns (Django, Next.js, Flutter, Astro, Tailwind, React)
+│   ├── execution/          # Stack-specific patterns, work discipline, Axon code intelligence
 │   ├── verification/       # Code review checklists per framework
 │   ├── writing/            # Clear writing, AI antipatterns
 │   ├── meta/               # Skills for authoring new skills
@@ -133,6 +133,30 @@ cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
 cmd:astro-bootstrap=skills/execution/astro-bootstrap.md
 cmd:visual-feedback=skills/execution/visual-feedback.md
 ```
+
+## Axon Integration (Code Intelligence)
+
+Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-powered structural analysis tool that indexes codebases into a knowledge graph. If installed, Axon provides MCP tools for call graphs, impact analysis, dead code detection, and execution flow tracing — giving agents structural awareness beyond text search.
+
+**Setup:**
+
+```bash
+pip install axoniq          # or: uv add axoniq
+axon analyze .              # Initial index
+axon serve --watch          # MCP server with live re-indexing
+```
+
+The `/scaffold` command auto-detects Axon and runs initial indexing when creating new projects. If Axon is not installed, it warns but doesn't block.
+
+**How agents use it:**
+
+| Stage | Axon tools | Purpose |
+|-------|-----------|---------|
+| Planning | `axon_query`, `axon_context` | Explore structure, understand existing architecture |
+| Execution | `axon_impact`, `axon_context` | Check blast radius before modifying symbols |
+| Verification | `axon_detect_changes`, `axon_dead_code` | Map diffs to affected symbols, catch orphaned code |
+
+See `skills/execution/axon-code-intel.md` for the full integration guide.
 
 ## Workflow
 
