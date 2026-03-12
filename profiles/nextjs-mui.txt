@@ -1,0 +1,16 @@
+# stack: frontend
+# label: Next.js (MUI)
+# directory: web
+#
+# Next.js frontend project skills — Material UI variant
+# MUI component reference: https://mui.com/material-ui/llms.txt
+
+skills/execution/nextjs-patterns.md
+skills/execution/cross-repo-context.md
+skills/verification/verify-nextjs.md
+agents/executor.md
+
+# On-demand reference docs (invoke with /react or /nextjs-bootstrap)
+cmd:react=skills/execution/react-best-practices.md
+cmd:nextjs-bootstrap=skills/execution/nextjs-mui-bootstrap.md
+cmd:visual-feedback=skills/execution/visual-feedback.md

@@ -73,7 +73,9 @@ polaris/
 └── profiles/
     ├── global.txt          # Skills for ~/.claude/
     ├── django.txt          # Backend stack (+ django.claude.md snippet)
-    ├── nextjs.txt          # Frontend stack (+ nextjs.claude.md snippet)
+    ├── nextjs.txt          # Frontend stack, DaisyUI (+ nextjs.claude.md snippet)
+    ├── nextjs-shadcn.txt   # Frontend stack, ShadCN UI (+ nextjs-shadcn.claude.md snippet)
+    ├── nextjs-mui.txt      # Frontend stack, Material UI (+ nextjs-mui.claude.md snippet)
     ├── flutter.txt         # Frontend stack (+ flutter.claude.md snippet)
     ├── astro.txt           # Frontend stack (+ astro.claude.md snippet)
     └── _multi-stack.txt    # Auto-added for multi-stack installs
@@ -99,7 +101,9 @@ Stacks are composable — select a backend and one or more frontends during `pol
 |---------|------|----------|
 | `global` | — | Installed to ~/.claude/, available everywhere |
 | `django` | backend | Django/DRF backend |
-| `nextjs` | frontend | Next.js frontend |
+| `nextjs` | frontend | Next.js frontend (DaisyUI) |
+| `nextjs-shadcn` | frontend | Next.js frontend (ShadCN UI) |
+| `nextjs-mui` | frontend | Next.js frontend (Material UI) |
 | `flutter` | frontend | Flutter mobile/web app |
 | `astro` | frontend | Astro landing page / marketing site |
 
@@ -116,12 +120,14 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/verify` | Verify a completed phase against the plan | global |
 | `/autopilot` | Autonomous phase execution (execute → test → verify → commit loop) | global |
 | `/scaffold` | Create project from a plan (git init, bootstrap, install stacks) | global |
-| `/react` | React best practices (57 rules) | nextjs |
-| `/tailwind` | Tailwind v4 design system | nextjs |
+| `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
+| `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
+| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |
+| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, Material UI, JWT auth) | nextjs-mui |
 | `/astro-bootstrap` | Astro project scaffolding (Tailwind v4, DaisyUI, landing page) | astro |
-| `/visual-feedback` | Agentation MCP workflow for browser-annotated UI fixes | nextjs, astro |
+| `/visual-feedback` | Agentation MCP workflow for browser-annotated UI fixes | nextjs, nextjs-shadcn, nextjs-mui, astro |
 
 Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of the default location:
 

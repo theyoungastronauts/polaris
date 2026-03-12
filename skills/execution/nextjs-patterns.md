@@ -25,8 +25,7 @@ Guide Claude Code when implementing Next.js features. Projects use one of two mo
 - UUIDs as primary identifiers in URLs
 
 ## Styling
-- DaisyUI semantic colors: `base-100`, `base-content`, `primary` — never hardcoded hex in components
-- Tailwind v4 syntax (`@import "tailwindcss"`, DaisyUI as `@plugin`)
+- Semantic color tokens from your UI library — never hardcoded hex in components
 - Responsive-first — mobile breakpoints before desktop
 
 ## Types
