@@ -47,10 +47,9 @@ Repeat for each phase:
 - If this phase produced API changes, generate the integration summary for frontend phases
 - Continue to the next phase
 
-**Autopilot (hands-off alternative):**
-- Start a Claude session in the sub-project
-- Run `/autopilot` — executes all phases: implement → test → verify → commit
-- Stops on FAIL — fix issues and run `/autopilot N` to resume
+**Hands-off alternatives:**
+- `/autopilot` — for pre-planned work. Executes all plan.md phases: implement → test → verify → commit. Stops on FAIL — run `/autopilot N` to resume.
+- `/orchestrator` — for broader work. Accepts inline tasks or plan.md, supports parallel execution, auto-phasing, and per-task model overrides. Use when tasks need decomposition or research.
 
 ### 4. Execute — Ongoing Feature Work
 

@@ -119,6 +119,7 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/execute` | Execute a phase of the plan | global |
 | `/verify` | Verify a completed phase against the plan | global |
 | `/autopilot` | Autonomous phase execution (execute → test → verify → commit loop) | global |
+| `/orchestrator` | Flexible task orchestration (parallel waves, auto-phasing, model overrides) | global |
 | `/scaffold` | Create project from a plan (git init, bootstrap, install stacks) | global |
 | `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
 | `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn |
@@ -178,7 +179,7 @@ See [USAGE.md](USAGE.md) for the complete walkthrough, or [QUICKSTART.md](QUICKS
 6. **Review** — Verify each phase with the reviewer agent
 7. **Repeat** — Move through phases until the MVP is complete
 
-Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases automatically and stops on failure.
+Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases automatically and stops on failure. For broader work that needs task queuing, parallel execution, or auto-phasing, use `/orchestrator` instead.
 
 **Ongoing development:**
 

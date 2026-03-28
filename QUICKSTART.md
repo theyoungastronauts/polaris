@@ -64,9 +64,10 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] `/verify` — checks the work against the plan, produces verification report
 - [ ] Fix any FAILs, then move to next phase
 
-**Or use autopilot (hands-off):**
-- [ ] `/autopilot` — loops through all phases: implement → test → verify → commit
-- [ ] Stops on FAIL — fix issues and `/autopilot N` to resume
+**Or use hands-off execution:**
+- [ ] `/autopilot` — for pre-planned phases: implement → test → verify → commit loop
+- [ ] `/orchestrator` — for broader work: inline tasks, parallel execution, auto-phasing, model overrides
+- [ ] Both stop on FAIL — fix issues and resume with `/autopilot N` or `/orchestrator N`
 
 ### 5. Cross-Repo Handoff (if applicable)
 

@@ -267,23 +267,25 @@ Claude will find the plan, ask which phase to execute, confirm, and start implem
 
 **After execution completes,** Claude will summarize what was done, list commits, flag any deviations, and suggest running `/verify` in a new session.
 
-### Alternative: Autopilot (hands-off)
+### Alternative: Hands-off Execution
 
-Instead of manually running `/execute` and `/verify` per phase, use `/autopilot` to loop through all phases automatically:
+Instead of manually running `/execute` and `/verify` per phase, use one of these:
+
+**`/autopilot`** — for pre-planned work. If you have a `plan.md` with well-defined phases, autopilot loops through them automatically: implement → lint/test → verify → commit. Stops on FAIL.
 
 ```
 You: /autopilot
+You: /autopilot 3    # resume from phase 3
 ```
 
-Autopilot spawns an executor and reviewer as teammates and orchestrates the full cycle for each phase: implement → lint/test → verify → commit. It stops immediately on a FAIL verdict so you can intervene.
-
-To resume from a specific phase after fixing issues:
+**`/orchestrator`** — for broader or more abstract work. Accepts inline task lists or `plan.md`, supports parallel execution of independent tasks, auto-phases large task lists, and allows per-task model overrides. Use when work needs decomposition or research.
 
 ```
-You: /autopilot 3
+You: /orchestrator
+You: /orchestrator 3    # resume from task/phase 3
 ```
 
-See `workflows/full-feature.md` for where this fits in the overall workflow.
+See `workflows/full-feature.md` for where these fit in the overall workflow.
 
 ---
 
@@ -429,7 +431,8 @@ git worktree add ../api-billing -b feature/billing
 | 2b | Scaffold (new projects) | Root folder | `/scaffold` command |
 | 3 | Execute | Sub-project (on main) | `/execute` command |
 | 4 | Verify | Sub-project (new session) | `/verify` command |
-| 3-5 | Autopilot (alternative) | Sub-project | `/autopilot` command (hands-off loop) |
+| 3-5 | Autopilot (alternative) | Sub-project | `/autopilot` command (pre-planned phases) |
+| 3-5 | Orchestrator (alternative) | Sub-project | `/orchestrator` command (flexible tasks, parallel, auto-phasing) |
 | 5 | Next phase | Sub-project | Repeat from 3 |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
 | — | Ongoing: single feature | Any repo | Branch → execute → review → PR |

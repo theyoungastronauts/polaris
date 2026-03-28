@@ -16,6 +16,7 @@ cmd:ux-to-prompts=skills/ux/ux-to-prompts.md
 cmd:execute=skills/execution/execute-phase.md
 cmd:verify=skills/verification/verify-phase.md
 cmd:autopilot=skills/execution/autopilot.md
+cmd:orchestrator=skills/execution/orchestrator.md
 cmd:intel=skills/execution/architecture-intel.md
 
 # Execution discipline
