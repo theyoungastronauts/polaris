@@ -358,6 +358,18 @@ _write_manifest() {
         fi
         files_json+="\"$path\""
     done < <(echo "$profile_lines" | _profile_lines_to_paths)
+
+    # Add context scaffold files if they exist
+    for ctx_file in context/ROUTER.md context/architecture.md context/decisions.md context/conventions.md context/patterns/README.md; do
+        if [[ -f "$claude_dir/$ctx_file" ]]; then
+            if [[ "$first" == "true" ]]; then
+                first=false
+            else
+                files_json+=", "
+            fi
+            files_json+="\"$ctx_file\""
+        fi
+    done
     files_json+="]"
 
     cat > "$manifest" <<EOF
@@ -440,7 +452,7 @@ _clean_project() {
     else
         # No manifest — remove standard Polaris directories
         warn "No manifest found — removing standard Polaris directories"
-        for subdir in skills agents workflows templates; do
+        for subdir in skills agents workflows templates context; do
             if [[ -d "$claude_dir/$subdir" ]]; then
                 if [[ "$dry_run" == "true" ]]; then
                     echo "  would remove: $subdir/"
@@ -525,7 +537,7 @@ _clean_project() {
 
     # Clean up empty directories
     if [[ "$dry_run" != "true" ]]; then
-        for subdir in skills agents workflows templates commands; do
+        for subdir in skills agents workflows templates commands context; do
             if [[ -d "$claude_dir/$subdir" ]]; then
                 find "$claude_dir/$subdir" -type d -empty -delete 2>/dev/null || true
             fi
@@ -1172,6 +1184,42 @@ _install_extras() {
 }
 
 # Install stacks (composable mode)
+# Copy context scaffold templates into .claude/context/
+# Only copies if .claude/context/ doesn't already exist (preserves user content)
+_install_context_templates() {
+    local claude_dir="$1"
+    local dry_run="${2:-false}"
+    local context_dir="$claude_dir/context"
+    local template_dir="$SKILLS_REPO/templates/context"
+
+    if [[ -d "$context_dir" ]]; then
+        info "  context/ already exists — skipping template copy (preserving user content)"
+        # Check for migration opportunity
+        if [[ -f "$claude_dir/architecture.md" && ! -f "$context_dir/ROUTER.md" ]]; then
+            warn "  Found architecture.md but no context scaffold — run /intel --full to migrate"
+        fi
+        return 0
+    fi
+
+    if [[ ! -d "$template_dir" ]]; then
+        warn "  Context templates not found in repo — skipping"
+        return 0
+    fi
+
+    if [[ "$dry_run" == "true" ]]; then
+        echo "  would copy: templates/context/ → $context_dir/"
+        return 0
+    fi
+
+    mkdir -p "$context_dir/patterns"
+    cp "$template_dir/ROUTER.md" "$context_dir/ROUTER.md"
+    cp "$template_dir/decisions.md" "$context_dir/decisions.md"
+    cp "$template_dir/conventions.md" "$context_dir/conventions.md"
+    cp "$template_dir/patterns/README.md" "$context_dir/patterns/README.md"
+    ok "  copied context scaffold templates to context/"
+    info "  Run /intel to populate with project-specific content"
+}
+
 _install_stacks() {
     local claude_dir="$1"
     local dry_run="$2"
@@ -1204,6 +1252,9 @@ _install_stacks() {
 
     # Install extras
     _install_extras "$claude_dir" "$dry_run" "$force" "${extras[@]+"${extras[@]}"}"
+
+    # Install context scaffold templates (only if context/ doesn't exist yet)
+    _install_context_templates "$claude_dir" "$dry_run"
 
     # Detect repo layout (monorepo vs multi-repo)
     local project_dir
@@ -1255,6 +1306,9 @@ _install_single_profile() {
 
     # Install extras
     _install_extras "$claude_dir" "$dry_run" "$force" "${extras[@]+"${extras[@]}"}"
+
+    # Install context scaffold templates (only if context/ doesn't exist yet)
+    _install_context_templates "$claude_dir" "$dry_run"
 
     # Generate CLAUDE.md
     if [[ "$no_claude_md" != "true" ]]; then

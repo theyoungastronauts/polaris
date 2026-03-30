@@ -59,6 +59,13 @@ When writing React/Next.js tests:
 - Don't shotgun-fix by trying multiple things at once. Change one thing, test, iterate.
 - If a fix works but you don't understand why, keep investigating.
 
+## Project Context
+
+- Start sessions with `/recall` to load relevant project context (architecture, decisions, conventions, patterns).
+- Run `/intel` after first install to populate the context scaffold in `.claude/context/`.
+- Use `/remember` after sessions to capture decisions, conventions, or patterns worth preserving.
+- The context router at `.claude/context/ROUTER.md` maps task types to the right context files — load only what you need.
+
 ## Context Awareness
 
 - Use `/compact` proactively when context is getting heavy.

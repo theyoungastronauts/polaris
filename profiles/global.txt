@@ -26,6 +26,10 @@ skills/execution/axon-code-intel.md
 # Writing
 skills/writing/writing-clearly.md
 
+# Memory & context (on-demand)
+cmd:remember=skills/memory/remember.md
+cmd:recall=skills/memory/recall.md
+
 # Meta
 skills/meta/writing-skills.md
 cmd:reflect=skills/meta/reflect.md
