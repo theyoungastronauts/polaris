@@ -26,7 +26,26 @@ If the phase produced or modified API endpoints:
 - Verify the integration summary exists and matches the actual serializers/views
 - Check that request/response shapes in the summary match the code
 
-## 5. Produce the Report
+## 5. Check Context Health
+
+Perform a lightweight check on the project's context scaffold. This is not a full drift analysis — just surface-level health.
+
+1. Check if `.claude/context/` exists
+   - **No:** Note "Context scaffold not present" and suggest `/intel` to generate it. Skip the rest of this step.
+   - **Yes:** Continue.
+
+2. List each file in `.claude/context/` (including `patterns/*.md`):
+   - Read the `Last updated` date from the header comment
+   - Note the line count
+   - Flag files not updated in 30+ days as stale
+
+3. Check ROUTER.md cross-references: verify each listed file actually exists
+
+4. Summarize findings for the report's Context Health section
+
+If context is stale or missing, suggest running `/intel` to refresh or `/remember` to add missing entries.
+
+## 6. Produce the Report
 
 Write the report to the **project root's** `docs/verification/` folder — one level above the sub-project you're working in. For example, if you're verifying work in `~/prj/my-app/api/`, the report goes in `~/prj/my-app/docs/verification/phase-N-[name].md`. Create the directory if it doesn't exist. All verification reports go here regardless of which sub-project the phase belongs to.
 
@@ -47,6 +66,17 @@ Write the report to the **project root's** `docs/verification/` folder — one l
 | Scope | PASS/WARN | [details] |
 | Integration summary | PASS/FAIL/N/A | [details] |
 
+## Context Health
+
+| File | Last Updated | Lines | Status |
+|------|-------------|-------|--------|
+| context/architecture.md | YYYY-MM-DD | NN | OK / Stale / Missing |
+| context/decisions.md | YYYY-MM-DD | NN | OK / Stale / Missing |
+| context/conventions.md | YYYY-MM-DD | NN | OK / Stale / Missing |
+| context/ROUTER.md | YYYY-MM-DD | NN | OK / Stale / Missing |
+
+[Any broken cross-references or suggestions]
+
 ## Issues
 
 ### FAIL (must fix)
@@ -59,7 +89,7 @@ Write the report to the **project root's** `docs/verification/` folder — one l
 PASS / PASS WITH WARNINGS / FAIL
 ```
 
-## 6. Commit (on PASS only)
+## 7. Commit (on PASS only)
 
 If the verdict is **PASS** or **PASS WITH WARNINGS** (and the user approves), commit all changes for the phase:
 
@@ -69,7 +99,7 @@ If the verdict is **PASS** or **PASS WITH WARNINGS** (and the user approves), co
 
 **Do not commit if the verdict is FAIL.** Fixes must happen first.
 
-## 7. Next Steps
+## 8. Next Steps
 
 Based on the verdict:
 - **PASS:** Changes committed. "Ready for the next phase. Start a new session and run `/execute`."
