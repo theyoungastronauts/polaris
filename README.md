@@ -58,6 +58,7 @@ polaris/
 │   ├── verification/       # Code review checklists per framework
 │   ├── writing/            # Clear writing, AI antipatterns
 │   ├── meta/               # Skills for authoring new skills
+│   ├── memory/             # Project context lifecycle (/remember, /recall)
 │   ├── ux/                 # Product requirements, UX specification
 │   ├── git/                # Commit and PR conventions
 │   └── misc/               # Project-specific skills (not in any profile)
@@ -69,7 +70,8 @@ polaris/
 ├── workflows/
 │   └── full-feature.md     # End-to-end feature workflow
 ├── templates/
-│   └── integration-summary.md
+│   ├── integration-summary.md
+│   └── context/            # Context scaffold templates (ROUTER, decisions, conventions, patterns)
 └── profiles/
     ├── global.txt          # Skills for ~/.claude/
     ├── django.txt          # Backend stack (+ django.claude.md snippet)
@@ -121,6 +123,9 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/autopilot` | Autonomous phase execution (execute → test → verify → commit loop) | global |
 | `/orchestrator` | Flexible task orchestration (parallel waves, auto-phasing, model overrides) | global |
 | `/scaffold` | Create project from a plan (git init, bootstrap, install stacks) | global |
+| `/intel` | Generate/update project context scaffold (architecture, decisions, conventions) | global |
+| `/remember` | Save a decision, convention, or pattern to the context scaffold | global |
+| `/recall` | Load relevant project context at session start | global |
 | `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
 | `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
@@ -165,6 +170,29 @@ The `/scaffold` command auto-detects Axon and runs initial indexing when creatin
 
 See `skills/execution/axon-code-intel.md` for the full integration guide.
 
+## Project Context
+
+Polaris maintains a navigable context scaffold in `.claude/context/` so agents load only what's relevant per task — not a monolithic architecture file.
+
+**The scaffold:**
+
+| File | Purpose |
+|------|---------|
+| `ROUTER.md` | Maps task types to the right context files — read this first |
+| `architecture.md` | Stack, structure, constraints, key entry points |
+| `decisions.md` | Lightweight ADRs — why things are the way they are |
+| `conventions.md` | Naming, file organization, error handling norms |
+| `patterns/` | Reusable solutions discovered during implementation (one file per pattern) |
+
+**How it works:**
+
+1. Run `/intel` after first install to populate the scaffold from codebase analysis
+2. Start sessions with `/recall` to load context relevant to your task
+3. Use `/remember` after sessions to capture new decisions, conventions, or patterns
+4. Run `/reflect` at session end — it now bridges session learnings into the scaffold
+
+The scaffold grows over time without growing token cost — agents read ROUTER.md (under 50 lines) and pull only the files relevant to their current task.
+
 ## Workflow
 
 See [USAGE.md](USAGE.md) for the complete walkthrough, or [QUICKSTART.md](QUICKSTART.md) for a cheat sheet.
@@ -183,7 +211,9 @@ Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases a
 
 **Ongoing development:**
 
+- Start sessions with `/recall` to load relevant project context
 - Single feature → branch, execute, review, PR, merge
+- After sessions, run `/remember` to capture decisions or patterns worth preserving
 - Multiple independent features → use git worktrees for parallel work (see `skills/git/worktrees.md`)
 
 ## Cross-Repo Context

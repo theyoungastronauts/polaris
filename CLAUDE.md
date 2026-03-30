@@ -12,10 +12,12 @@ skills/          Markdown instruction files Claude loads for guidance
   verification/  Code review checklists per framework
   writing/       Prose quality, AI antipatterns
   meta/          Skills for authoring new skills
+  memory/        Project context lifecycle (/remember, /recall)
   git/           Commit conventions, worktrees
 agents/          Role definitions (planner, executor, reviewer, integrator)
 workflows/       Multi-step orchestration docs
 templates/       Fillable templates (integration summaries)
+  context/       Context scaffold templates (ROUTER, decisions, conventions, patterns)
 profiles/        .txt manifests + .claude.md snippets per stack
   _multi-stack.txt  Auto-added items for multi-stack installs
   *.claude.md       CLAUDE.md context snippets (one per stack, uses {directory} placeholder)

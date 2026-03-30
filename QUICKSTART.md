@@ -40,6 +40,11 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] `/ux-spec` — run 6 UX passes (mental model, IA, affordances, cognitive load, states, flow integrity)
 - [ ] Skip for backend-only features
 
+### 1c. Generate Project Context (after first few phases)
+
+- [ ] `/intel` — populates `.claude/context/` with architecture, decisions, conventions, patterns
+- [ ] Skip for brand-new projects — run after there's enough code to analyze
+
 ### 2. Scaffold
 
 - [ ] In the same session: "Let's scaffold the project using /scaffold"
@@ -63,6 +68,7 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] When done, start a **new** Claude session
 - [ ] `/verify` — checks the work against the plan, produces verification report
 - [ ] Fix any FAILs, then move to next phase
+- [ ] `/remember` — capture any decisions, conventions, or patterns worth preserving
 
 **Or use hands-off execution:**
 - [ ] `/autopilot` — for pre-planned phases: implement → test → verify → commit loop
@@ -78,6 +84,9 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 ---
 
 ## Ongoing Development
+
+- [ ] `/recall` at session start — loads relevant project context
+- [ ] `/remember` at session end — captures decisions and patterns
 
 **Single feature:** branch → `/execute` → `/verify` → PR → merge
 

@@ -85,6 +85,49 @@ You can add project-specific context (stack, conventions) above or below the Pol
 
 ---
 
+## Step 0b: Generate Project Context
+
+After setting up a project (Path A or B), populate the context scaffold:
+
+```
+You: /intel
+```
+
+This analyzes the codebase and fills `.claude/context/` with project-specific content:
+- `architecture.md` — stack, structure, constraints, key entry points
+- `decisions.md` — why things are the way they are (inferred from config and patterns)
+- `conventions.md` — naming, file organization, error handling norms
+- `patterns/` — reusable structural patterns discovered in the code
+- `ROUTER.md` — maps task types to the right context files
+
+**Skip this step** if the project is brand new (nothing to analyze yet). Run `/intel` after your first few phases when there's enough code to learn from.
+
+---
+
+## Context Management
+
+The context scaffold lets agents load only the context relevant to their current task. Here's how to use it throughout the development cycle.
+
+**At session start:** Run `/recall` to prime your context.
+
+```
+You: /recall                          # overview of all context files
+You: /recall fix the payment webhook  # loads context relevant to debugging
+```
+
+**After sessions:** Capture anything worth remembering.
+
+```
+You: /remember We chose Stripe webhooks over polling because of real-time requirements
+You: /remember API endpoints always return envelope format: { data, meta, errors }
+```
+
+**Periodically:** Run `/intel` to refresh the scaffold after major changes. Run `/reflect` at session end — it now proposes writing structural findings to the scaffold.
+
+The scaffold grows over time as you add decisions, conventions, and patterns — but token cost stays flat because agents only load what's relevant per task (routed via `ROUTER.md`).
+
+---
+
 ## Step 1: Brainstorm
 
 Open a Claude Code session in your project directory. This is a conversation, not code — you're shaping the idea.
@@ -425,6 +468,7 @@ git worktree add ../api-billing -b feature/billing
 | Step | What | Where | Agent/Skill |
 |------|------|-------|-------------|
 | 0 | Project setup | Root folder | `polaris global` / `polaris project` |
+| 0b | Generate project context | Project root | `/intel` command |
 | 1 | Brainstorm | Root folder | `brainstorming` skill |
 | 1b | Product definition (optional) | Root folder | `/prd` + `/ux-spec` commands |
 | 2 | Plan | Root folder (new session) | `plan-and-scope` + `phase-breakdown` skills |
@@ -434,6 +478,8 @@ git worktree add ../api-billing -b feature/billing
 | 3-5 | Autopilot (alternative) | Sub-project | `/autopilot` command (pre-planned phases) |
 | 3-5 | Orchestrator (alternative) | Sub-project | `/orchestrator` command (flexible tasks, parallel, auto-phasing) |
 | 5 | Next phase | Sub-project | Repeat from 3 |
+| — | Load context at session start | Any repo | `/recall` command |
+| — | Capture decisions/patterns | Any repo (session end) | `/remember` command |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
 | — | Ongoing: single feature | Any repo | Branch → execute → review → PR |
 | — | Ongoing: parallel features | Any repo | Worktrees (see `skills/git/worktrees.md`) |
@@ -451,4 +497,7 @@ git worktree add ../api-billing -b feature/billing
 - **Use `/react` or `/tailwind` when you need them.** These are on-demand commands — they only load into context when invoked, keeping your baseline token usage low.
 - **Use `/visual-feedback` for UI iteration.** Install [Agentation](https://agentation.dev) in your project, and humans can annotate the live page in the browser while Claude picks up fixes via MCP. The bootstrap skills offer this as an optional step, or invoke `/visual-feedback` for the workflow.
 - **Install Axon for structural awareness.** `pip install axoniq && axon analyze .` gives agents call graphs, impact analysis, and dead code detection. The MCP server (`axon serve --watch`) keeps the index current as you code. See `skills/execution/axon-code-intel.md`.
+- **Start sessions with `/recall`.** It loads only the context relevant to your task — no wasted tokens on architecture you don't need right now.
+- **Run `/remember` after productive sessions.** Decisions and patterns fade from memory. Capture them while they're fresh — they become context for future sessions.
+- **Run `/intel` periodically.** After major refactors or dependency changes, refresh the context scaffold so it stays accurate.
 - **When in doubt, check the skills.** They're in `.claude/skills/` and `.claude/agents/` — read them if you forget the conventions.
