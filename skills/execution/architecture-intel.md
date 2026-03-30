@@ -1,26 +1,30 @@
 # Skill: Architecture Intel
 
 ## Overview
-Extract and maintain a persistent architectural summary of a codebase in `.claude/architecture.md`. Eliminates cold-start context loss across sessions by documenting stack, decisions, patterns, constraints, and conventions in a file Claude loads automatically.
+Extract and maintain a persistent architectural context scaffold in `.claude/context/`. Eliminates cold-start context loss across sessions by documenting stack, decisions, patterns, constraints, and conventions — each in its own file so agents load only what's relevant per task.
+
+For backwards compatibility, `.claude/architecture.md` is maintained as a slimmed summary pointing to the full scaffold.
 
 ## When to Use
 - First session on a new-to-you project
 - After major refactors, dependency upgrades, or architectural shifts
-- Periodically (every few weeks) to keep the file current
+- Periodically (every few weeks) to keep context files current
 - When onboarding a new stack or sub-project
 
-Do NOT use for: small bug fixes, routine feature work where architecture.md already exists and is current.
+Do NOT use for: small bug fixes, routine feature work where context files already exist and are current.
 
 ## Process
 
 ### Step 1: Detect Mode
 
-Check if `.claude/architecture.md` exists:
+Check if `.claude/context/ROUTER.md` exists:
 
-- **Does not exist** → First Run mode (full analysis)
-- **Exists** → read the `Last updated` date from the header comment
+- **Does not exist** → First Run mode (full analysis, generate entire scaffold)
+- **Exists** → read the `Last updated` date from each context file's header comment
   - If user passed `--full` → Full Refresh mode
   - Otherwise → Incremental mode
+
+**Backwards compatibility:** If `.claude/architecture.md` exists but `.claude/context/` does not, treat as First Run mode. The monolithic file will be preserved as a reference during migration.
 
 ### Step 2: Check Axon Availability
 
@@ -51,81 +55,138 @@ Inform the user which path you're taking.
 **Incremental mode — both paths:**
 1. Run `git log --since="[last-updated-date]" --stat --pretty=format:"%H %s"` to identify what changed
 2. If Axon available, run `axon_detect_changes` on the range for structural impact
-3. Classify changed files to determine which sections need updating:
-   - Config/manifest changes → Stack, Decisions
-   - New directories or apps → Architecture Overview, Conventions
-   - New service/pattern files → Patterns
-   - New middleware, validators, exception handlers → Constraints, Patterns
-4. Re-analyze only the code relevant to affected sections
-5. Skip sections whose underlying code did not change
+3. Classify changed files to determine which context files need updating:
+   - Config/manifest changes → `architecture.md` + `decisions.md`
+   - New directories or apps → `architecture.md` + `conventions.md`
+   - New service/pattern files → suggest adding a pattern to `patterns/`
+   - New middleware, validators, exception handlers → `architecture.md` (constraints) + suggest pattern
+   - Dependency additions/removals → `decisions.md`
+4. Re-analyze only the code relevant to affected files
+5. Skip context files whose underlying code did not change
 
 ### Step 4: Extract Architecture
 
-For each of the six categories, extract concrete, specific findings — not generic descriptions. Every bullet should be grounded in what the code actually does.
+For each category, extract concrete, specific findings — not generic descriptions. Every bullet should be grounded in what the code actually does.
+
+**For `architecture.md` (`.claude/context/architecture.md`):**
 
 | Category | What to capture | Example |
 |----------|----------------|---------|
 | **Stack** | Technology, version, directory | `Django 5.1 + DRF (server/)` |
 | **Architecture Overview** | Layer map, boundaries, data flow | "Three-layer: views → services → models. All external API calls isolated in clients/" |
-| **Decisions** | Technology/pattern choice + rationale | "JWT over sessions: stateless auth for mobile client support" |
-| **Patterns** | Structural patterns to follow for new code | "API views use class-based ViewSets registered with DefaultRouter" |
 | **Constraints** | Non-negotiable rules | "All list endpoints paginated (PageNumberPagination, default 20)" |
-| **Conventions** | Naming, file org, project-specific norms | "Tests: apps/[domain]/tests/test_[module].py" |
+| **Key Entry Points** | 3-5 files to understand first | `server/config/urls.py`, `web/app/layout.tsx` |
 
-Also identify **Key Entry Points** — the 3-5 files a developer would need to understand first.
+**For `decisions.md` (`.claude/context/decisions.md`):**
 
-**Multi-stack projects:** Detect multiple sub-projects (look for multiple package manifests at different directory levels, or sub-project directories in CLAUDE.md). Keep Decisions and Constraints flat (project-wide). Give Patterns and Conventions per-stack subsections:
+| What to capture | Example |
+|----------------|---------|
+| Technology/pattern choice + rationale + date | "JWT over sessions: stateless auth for mobile client support" |
+| Status: Active or Superseded | If superseded, link to the replacement decision |
+
+**For `conventions.md` (`.claude/context/conventions.md`):**
+
+| Category | What to capture | Example |
+|----------|----------------|---------|
+| **Naming** | Naming conventions with examples | "Tests: apps/[domain]/tests/test_[module].py" |
+| **File Organization** | Directory structure rules | "One service file per Django app" |
+| **Error Handling** | Error handling norms | "All API errors go through custom exception handler" |
+| **Testing** | Testing conventions | "Integration tests use factory_boy, unit tests use mocks" |
+| **Project-Specific Rules** | Anything else specific to this project | "Never import from another app's models directly" |
+
+**For `patterns/` (`.claude/context/patterns/`):**
+
+When a recurring structural pattern is discovered, create a pattern file following the format in `patterns/README.md`. Only create pattern files for significant, reusable patterns — not every code convention.
+
+**Multi-stack projects:** Detect multiple sub-projects (look for multiple package manifests at different directory levels, or sub-project directories in CLAUDE.md). Keep Decisions flat (project-wide). Give Conventions and Patterns per-stack subsections:
 
 ```markdown
-## Patterns
+## Naming
 ### Backend (server/)
 - ...
 ### Frontend (web/)
 - ...
 ```
 
-### Step 5: Write or Update architecture.md
+### Step 5: Write or Update Context Files
 
-**First Run / Full Refresh:**
-- Use the template structure from `templates/architecture.md`
-- Fill every section with extracted findings
-- Set the `Last updated` date to today
-- Write to `.claude/architecture.md`
-- On Full Refresh: preserve the entire `## Manual Notes` section and everything below it from the existing file
+**First Run:**
+1. Create `.claude/context/` directory structure:
+   - Copy templates from `templates/context/` as starting points
+   - Fill `architecture.md` with extracted Stack, Architecture Overview, Constraints, Key Entry Points
+   - Fill `decisions.md` with extracted decisions (replace placeholder entries)
+   - Fill `conventions.md` with extracted conventions by category
+   - Create any `patterns/*.md` files for significant patterns discovered
+2. Set the `Last updated` date to today in each file's header comment
+3. Generate `ROUTER.md` (see Step 5b)
+4. Write `.claude/architecture.md` as the slimmed summary (use `templates/architecture.md` format) with a pointer to `context/` — this maintains backwards compatibility
+
+**Full Refresh (`--full`):**
+1. Re-analyze the entire codebase (same as First Run analysis)
+2. Rewrite all context files with fresh findings
+3. **Preserve the `## Manual Notes` section** and everything below it in each file that has one
+4. Regenerate `ROUTER.md` (see Step 5b)
+5. Update `.claude/architecture.md` summary
+6. Update `Last updated` dates
 
 **Incremental:**
-- Read the existing `.claude/architecture.md` in full
-- Update only the sections identified in Step 3 as affected
-- Do NOT rewrite sections whose underlying code hasn't changed
-- NEVER modify the `## Manual Notes` section or anything below it
-- Update the `Last updated` date
+1. Read all existing context files in `.claude/context/`
+2. Update only the files identified in Step 3 as affected by recent changes
+3. Do NOT rewrite files whose underlying code hasn't changed
+4. NEVER modify `## Manual Notes` sections or anything below them
+5. If a new pattern is discovered, create a new `patterns/*.md` file and regenerate ROUTER.md
+6. Update `Last updated` dates only on files that were modified
+7. Update `.claude/architecture.md` if the architecture summary changed
 
-**Size discipline:** Target under 200 lines. This file loads into every session's context. If a section grows beyond 10 bullets, consolidate or move detail to the Manual Notes section. Prioritize the patterns and conventions Claude needs most frequently.
+### Step 5b: Generate ROUTER.md
+
+After writing or updating context files, rebuild ROUTER.md:
+
+1. Read the current `ROUTER.md` (or use the template for first run)
+2. Update the **Context Files** table:
+   - List every file in `.claude/context/` (except ROUTER.md itself)
+   - List every `patterns/*.md` file individually
+   - Set Status to "Populated" for files with content, "Template" for empty ones
+3. Update the **Task Routing** table if new pattern files warrant specific routing (e.g., a "Testing Pattern" file should be listed under Debugging/Fixing tasks)
+4. Keep ROUTER.md under 50 lines — it's a dispatch table, not a knowledge base
 
 ### Step 6: Wrap Up
 
-After writing/updating the file:
-1. Summarize what was found or changed
+After writing/updating the files:
+1. Summarize what was found or changed, listing which context files were created/updated
 2. Note if anything looks unusual or worth the user's attention
 3. Mention the drift detector: *"You can check recent changes against these conventions by loading `agents/drift-detector.md` as a subagent."*
+4. Mention memory commands: *"Use `/remember` to capture additional decisions, conventions, or patterns. Use `/recall` at the start of future sessions to load relevant context."*
 
 ## Quick Reference
 
 | Mode | Trigger | Scope | Manual Notes |
 |------|---------|-------|--------------|
-| First Run | No architecture.md exists | Full analysis | N/A |
-| Incremental | architecture.md exists (default) | Changed sections only | Preserved |
-| Full Refresh | User passes `--full` | Full re-analysis | Preserved |
+| First Run | No `.claude/context/` exists | Full analysis, all context files | N/A |
+| Incremental | Context exists (default) | Changed files only | Preserved |
+| Full Refresh | User passes `--full` | Full re-analysis, all files | Preserved |
 
 | Axon Available | Analysis Approach |
 |----------------|-------------------|
 | Yes | axon_query → axon_context → axon_cypher + manifest reads |
 | No | Entry point reads → glob for patterns → representative file reads |
 
+| Context File | Contains | Size Target |
+|-------------|----------|-------------|
+| `architecture.md` | Stack, overview, constraints, entry points | Under 80 lines |
+| `decisions.md` | Lightweight ADRs with rationale | Under 60 lines |
+| `conventions.md` | Naming, file org, error handling, testing norms | Under 60 lines |
+| `patterns/*.md` | One file per significant reusable pattern | Under 40 lines each |
+| `ROUTER.md` | Navigation hub — dispatch table | Under 50 lines |
+
+**Total token budget:** The scaffold should be smaller in aggregate than the old monolithic architecture.md when only relevant files are loaded per task. ROUTER.md + one context file should be under 100 lines.
+
 ## Common Mistakes
 
-- **Overwriting Manual Notes** — never modify content after the `## Manual Notes` heading
-- **Rewriting unchanged sections** — in incremental mode, only touch sections affected by recent changes
+- **Overwriting Manual Notes** — never modify content after the `## Manual Notes` heading in any context file
+- **Rewriting unchanged files** — in incremental mode, only touch files affected by recent changes
 - **Generic descriptions** — "uses a service layer" is useless. "Business logic in `apps/*/services.py`, views call service functions, never access ORM directly" is useful
-- **Too long** — if the file exceeds 200 lines, it costs more context than it saves. Trim aggressively
+- **Too long** — if any single context file exceeds its size target, trim aggressively. The point of the scaffold is to load less, not more
 - **Missing rationale in Decisions** — "uses JWT" isn't a decision. "JWT over sessions: needed stateless auth for mobile clients" is
+- **Forgetting backwards compat** — always update `.claude/architecture.md` alongside the scaffold so projects that haven't migrated still get a useful summary
+- **Bloated ROUTER.md** — the router is a dispatch table. If it exceeds 50 lines, you're putting content in it that belongs in the context files
