@@ -47,7 +47,33 @@ Each candidate must pass ALL four checks:
 
 Discard anything that fails any check.
 
-## 3. Propose Updates
+## 3. Bridge to Project Context
+
+After filtering, do a second pass on the surviving findings. Ask: **"Is this finding project-structural?"**
+
+A finding is project-structural if it describes:
+- An architectural decision or tradeoff (→ `decisions.md`)
+- A naming, file organization, or error handling convention (→ `conventions.md`)
+- A reusable structural pattern (→ `patterns/`)
+
+For any project-structural findings, check if `.claude/context/` exists:
+
+**If the scaffold exists:** Propose writing them using the `/remember` format. Present each one:
+
+```
+**Context type:** Decision | Convention | Pattern
+**Target:** .claude/context/<file>
+**Entry:**
+> [The formatted entry text]
+```
+
+Group these separately from session memory proposals (Step 4). The user approves context writes independently from memory writes.
+
+**If the scaffold doesn't exist:** Skip this step. Mention that `/intel` can generate the scaffold if the user wants to persist project-level findings.
+
+Non-structural findings (personal preferences, debugging tricks, tool configurations) stay in session memory only — continue to Step 4 for those.
+
+## 4. Propose Session Memory Updates
 
 For each surviving finding, present:
 
@@ -64,9 +90,13 @@ For each surviving finding, present:
 
 Group by scope (global first, then project), then by file.
 
-## 4. Write Approved Changes
+## 5. Write Approved Changes
 
 Only write what the user explicitly approves.
+
+**Project context entries** (from Step 3): Use the `/remember` process — classify, deduplicate, format, write to the appropriate context file.
+
+**Session memory entries** (from Step 4):
 
 1. Read the target memory file (create if it doesn't exist)
 2. Add or update content, keeping the file organized by topic
