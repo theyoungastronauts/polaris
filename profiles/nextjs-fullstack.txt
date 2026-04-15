@@ -1,0 +1,14 @@
+# stack: backend
+# label: Next.js (Full Stack)
+# directory: web
+#
+# Full-stack Next.js backend — Drizzle ORM, Postgres, Redis, BullMQ, Auth.js
+# Pair with a Next.js frontend profile for UI library choice
+
+skills/execution/nextjs-fullstack-patterns.md
+skills/verification/verify-nextjs-fullstack.md
+agents/executor.md
+templates/integration-summary.md
+
+# On-demand reference docs (invoke with /nextjs-fullstack-bootstrap)
+cmd:nextjs-fullstack-bootstrap=skills/execution/nextjs-fullstack-bootstrap.md
