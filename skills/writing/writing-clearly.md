@@ -69,6 +69,8 @@ LLMs regress to statistical means, producing generic, puffy prose. Avoid:
 
 Be specific, not grandiose. Say what it actually does.
 
+For the full catalog of AI writing tells (sentence structure, tone, composition patterns), use `/write-as-human`.
+
 ## Bottom Line
 
 When writing for humans: use active voice, put statements in positive form, be specific, and omit needless words. If it sounds like marketing copy, rewrite it.
