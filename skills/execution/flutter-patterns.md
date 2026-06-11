@@ -383,34 +383,44 @@ Singleton Dio instance with interceptor chain: auth, token refresh, logging.
 ```dart
 class DioClient {
   final Dio _dio;
+  final Session _session;
 
-  DioClient({required String baseUrl, required Session session}) : _dio = Dio(
-    BaseOptions(
-      baseUrl: baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-      },
-    ),
-  ) {
+  DioClient({required Session session})
+      : _session = session,
+        _dio = Dio(
+          BaseOptions(
+            baseUrl: Env.apiBaseUrl,
+            connectTimeout: const Duration(seconds: 10),
+            receiveTimeout: const Duration(seconds: 10),
+            headers: {
+              'Content-Type': 'application/json',
+              'Accept': 'application/json',
+            },
+          ),
+        ) {
     _dio.interceptors.addAll([
-      _authInterceptor(session),
-      if (kDebugMode) _loggingInterceptor(),
+      _authInterceptor(),
+      if (kDebugMode) LogInterceptor(requestBody: true, responseBody: true),
     ]);
   }
 
-  Interceptor _authInterceptor(SessionProvider session) {
+  Interceptor _authInterceptor() {
     return InterceptorsWrapper(
       onRequest: (options, handler) async {
-        final token = session.token;
+        final token = _session.token;
         if (token != null) {
           if (token.accessIsExpired && !token.refreshIsExpired) {
-            final newToken = await _refreshToken(token.refresh);
-            session.setToken(newToken);
-            options.headers['Authorization'] = 'Bearer ${newToken.access}';
-          } else {
+            try {
+              final newToken = await _refreshToken(token.refresh);
+              _session.setToken(newToken);
+              options.headers['Authorization'] = 'Bearer ${newToken.access}';
+            } on DioException {
+              _session.clearToken();
+              return handler.reject(
+                DioException(requestOptions: options, type: DioExceptionType.cancel),
+              );
+            }
+          } else if (!token.accessIsExpired) {
             options.headers['Authorization'] = 'Bearer ${token.access}';
           }
         }
@@ -418,15 +428,11 @@ class DioClient {
       },
       onError: (error, handler) {
         if (error.response?.statusCode == 401) {
-          session.clearToken();
+          _session.clearToken();
         }
         handler.next(error);
       },
     );
-  }
-
-  Interceptor _loggingInterceptor() {
-    return LogInterceptor(requestBody: true, responseBody: true);
   }
 
   Future<SessionToken> _refreshToken(String refreshToken) async {
@@ -436,22 +442,38 @@ class DioClient {
   }
 
   Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? queryParameters}) async {
-    final response = await _dio.get(path, queryParameters: queryParameters);
-    return response.data;
+    try {
+      final response = await _dio.get(path, queryParameters: queryParameters);
+      return response.data;
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
   }
 
   Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? data}) async {
-    final response = await _dio.post(path, data: data);
-    return response.data;
+    try {
+      final response = await _dio.post(path, data: data);
+      return response.data;
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
   }
 
   Future<Map<String, dynamic>> patch(String path, {Map<String, dynamic>? data}) async {
-    final response = await _dio.patch(path, data: data);
-    return response.data;
+    try {
+      final response = await _dio.patch(path, data: data);
+      return response.data;
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
   }
 
   Future<void> delete(String path) async {
-    await _dio.delete(path);
+    try {
+      await _dio.delete(path);
+    } on DioException catch (e) {
+      throw mapDioException(e);
+    }
   }
 }
 ```
@@ -459,9 +481,9 @@ class DioClient {
 **Conventions:**
 - Single `Dio` instance — no per-request construction
 - Timeouts configured at construction
-- Token refresh in the auth interceptor, not scattered across services
+- Token refresh in the auth interceptor, not scattered across services — and a failed refresh clears the session and rejects the request rather than sending it unauthenticated
 - `LogInterceptor` gated behind `kDebugMode` — no raw `print()`
-- Throw `DioException` — services convert to typed `Failure`
+- `DioClient` maps `DioException` to a typed `Failure` via `mapDioException` (see Error Handling) — services and providers only ever see `Failure`s
 
 ## Auth
 
@@ -470,13 +492,18 @@ JWT session with secure storage, auth state provider, and router guard.
 ### Session provider
 
 ```dart
+@riverpod
+FlutterSecureStorage secureStorage(Ref ref) {
+  return const FlutterSecureStorage();
+}
+
 @Riverpod(keepAlive: true)
 class Session extends _$Session {
   @override
   SessionToken? build() => null;
 
   Future<void> initialize() async {
-    final storage = ref.read(storageProvider);
+    final storage = ref.read(secureStorageProvider);
     final access = await storage.read(key: 'access_token');
     final refresh = await storage.read(key: 'refresh_token');
     if (access != null && refresh != null) {
@@ -486,17 +513,19 @@ class Session extends _$Session {
 
   void setToken(SessionToken token) {
     state = token;
-    final storage = ref.read(storageProvider);
+    final storage = ref.read(secureStorageProvider);
     storage.write(key: 'access_token', value: token.access);
     storage.write(key: 'refresh_token', value: token.refresh);
   }
 
   void clearToken() {
     state = null;
-    final storage = ref.read(storageProvider);
+    final storage = ref.read(secureStorageProvider);
     storage.delete(key: 'access_token');
     storage.delete(key: 'refresh_token');
   }
+
+  SessionToken? get token => state;
 }
 ```
 
