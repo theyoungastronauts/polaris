@@ -36,6 +36,7 @@ Perform a lightweight check on the project's context scaffold. This is not a ful
 
 2. List each file in `.claude/context/` (including `patterns/*.md`):
    - Read the `Last updated` date from the header comment
+   - If the date is still the literal `YYYY-MM-DD` placeholder, the file is an unfilled template — report it as "Template (run /intel)" rather than stale
    - Note the line count
    - Flag files not updated in 30+ days as stale
 
