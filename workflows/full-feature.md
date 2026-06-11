@@ -33,7 +33,7 @@ Repeat for each phase:
 **Execute:**
 - Start a Claude session in the sub-project
 - Tell it: "Execute phase N of the plan"
-- The executor agent reads plan.md, implements, and commits as it goes
+- The executor agent reads plan.md and implements all tasks — it does **not** commit; changes stay uncommitted until verification passes
 
 **Review:**
 - Start a NEW Claude session in the same directory
@@ -42,7 +42,7 @@ Repeat for each phase:
 - Fix any FAIL items, re-verify if needed
 
 **Commit and move on:**
-- Commits happen on main as the executor works
+- On PASS, the reviewer commits the phase (implementation + verification report) to main
 - Between phases, the commit history provides a natural review point
 - If this phase produced API changes, generate the integration summary for frontend phases
 - Continue to the next phase

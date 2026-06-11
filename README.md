@@ -6,7 +6,7 @@ A version-controlled collection of skills, agents, and workflows for AI-assisted
 
 ```bash
 # Clone the repo
-git clone <your-repo-url> ~/prj/polaris
+git clone https://github.com/theyoungastronauts/polaris.git ~/prj/polaris
 cd ~/prj/polaris
 
 # Initialize (saves repo location, adds 'polaris' alias to your shell)
@@ -64,23 +64,26 @@ polaris/
 │   └── misc/               # Project-specific skills (not in any profile)
 ├── agents/
 │   ├── planner.md          # Planning agent
+│   ├── design-intake.md    # Distills docs/design/ artifacts into a design doc
 │   ├── executor.md         # Code execution agent
 │   ├── reviewer.md         # Verification/review agent
-│   └── integrator.md       # Cross-repo context agent
+│   ├── integrator.md       # Cross-repo context agent
+│   └── drift-detector.md   # Checks recent changes against documented conventions
 ├── workflows/
 │   └── full-feature.md     # End-to-end feature workflow
 ├── templates/
 │   ├── integration-summary.md
 │   └── context/            # Context scaffold templates (ROUTER, decisions, conventions, patterns)
 └── profiles/
-    ├── global.txt          # Skills for ~/.claude/
-    ├── django.txt          # Backend stack (+ django.claude.md snippet)
-    ├── nextjs.txt          # Frontend stack, DaisyUI (+ nextjs.claude.md snippet)
-    ├── nextjs-shadcn.txt   # Frontend stack, ShadCN UI (+ nextjs-shadcn.claude.md snippet)
-    ├── nextjs-mui.txt      # Frontend stack, Material UI (+ nextjs-mui.claude.md snippet)
-    ├── flutter.txt         # Frontend stack (+ flutter.claude.md snippet)
-    ├── astro.txt           # Frontend stack (+ astro.claude.md snippet)
-    └── _multi-stack.txt    # Auto-added for multi-stack installs
+    ├── global.txt              # Skills for ~/.claude/
+    ├── django.txt              # Backend stack (+ django.claude.md snippet)
+    ├── nextjs-fullstack.txt    # Backend stack: full-stack Next.js (+ snippet)
+    ├── nextjs.txt              # Frontend stack, DaisyUI (+ nextjs.claude.md snippet)
+    ├── nextjs-shadcn.txt       # Frontend stack, ShadCN UI (+ snippet)
+    ├── nextjs-mui.txt          # Frontend stack, Material UI (+ snippet)
+    ├── flutter.txt             # Frontend stack (+ flutter.claude.md snippet)
+    ├── astro.txt               # Frontend stack (+ astro.claude.md snippet)
+    └── _multi-stack.txt        # Auto-added for multi-stack installs
 ```
 
 ## External Skills
@@ -94,6 +97,7 @@ Some skills are adapted from popular open-source skill repos:
 | Writing Skills (meta) | [obra/superpowers](https://github.com/obra/superpowers) | `skills/meta/writing-skills.md` |
 | Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/execution/tailwind-v4-design-system.md` |
 | React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/execution/react-best-practices.md` |
+| Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/writing/write-as-human.md` |
 
 ## Profiles
 
@@ -103,6 +107,7 @@ Stacks are composable — select a backend and one or more frontends during `pol
 |---------|------|----------|
 | `global` | — | Installed to ~/.claude/, available everywhere |
 | `django` | backend | Django/DRF backend |
+| `nextjs-fullstack` | backend | Full-stack Next.js (Drizzle, Postgres, Redis, BullMQ, Auth.js) — pair with a Next.js frontend profile to pick the UI library |
 | `nextjs` | frontend | Next.js frontend (DaisyUI) |
 | `nextjs-shadcn` | frontend | Next.js frontend (ShadCN UI) |
 | `nextjs-mui` | frontend | Next.js frontend (Material UI) |
@@ -126,12 +131,16 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/intel` | Generate/update project context scaffold (architecture, decisions, conventions) | global |
 | `/remember` | Save a decision, convention, or pattern to the context scaffold | global |
 | `/recall` | Load relevant project context at session start | global |
+| `/reflect` | Session retrospective — bridges learnings into the context scaffold | global |
+| `/write-as-human` | Strip AI writing patterns from prose | global |
 | `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
-| `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn |
+| `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn, astro |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, Material UI, JWT auth) | nextjs-mui |
+| `/nextjs-fullstack-bootstrap` | Full-stack Next.js scaffolding (Drizzle, Postgres, Redis, BullMQ, Auth.js) | nextjs-fullstack |
+| `/flutter-bootstrap` | Flutter project scaffolding (Riverpod, go_router, dio) | flutter |
 | `/astro-bootstrap` | Astro project scaffolding (Tailwind v4, DaisyUI, landing page) | astro |
 | `/visual-feedback` | Agentation MCP workflow for browser-annotated UI fixes | nextjs, nextjs-shadcn, nextjs-mui, astro |
 
@@ -253,6 +262,7 @@ polaris project --stack django --stack nextjs --force
 
 - **Add a skill**: Create a `.md` file in the appropriate `skills/` subdirectory
 - **Add a profile**: Create a `.txt` file in `profiles/` listing the files to include
+- **Check your changes**: Run `./install.sh validate` — catches missing files, duplicate command names, and stack profiles without a CLAUDE.md snippet
 - **Add an on-demand command**: Use `cmd:name=path/to/skill.md` in a profile to install as `/name` slash command
 - **Add a project-specific skill**: Put it in `skills/misc/` and install with `--extra skills/misc/my-skill.md` (keeps it out of profiles)
 - **Project overrides**: Edit installed files in your project's `.claude/` — they won't be overwritten unless you use `--force`

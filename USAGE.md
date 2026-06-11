@@ -53,7 +53,7 @@ polaris project --clean --stack django --stack nextjs
 polaris project --clean --fresh --stack django --stack nextjs
 ```
 
-`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `workflows/`, `templates/`, `commands/`). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created.
+`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `workflows/`, `templates/`, `commands/`). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created. Files in `.claude/context/` are only removed while they're still pristine templates — once populated by `/intel` or `/remember` they count as project content and are kept.
 
 Skip to Step 3 (Execute) if you already have a plan, or Step 1 if you want to brainstorm first.
 
@@ -71,7 +71,7 @@ You can add project-specific context (stack, conventions) above or below the Pol
 # Project: My App
 
 ## Stack
-- Python 3.12, Django 5.1, DRF
+- Python 3.12, Django 5.2, DRF
 - PostgreSQL
 
 ## Conventions
@@ -291,7 +291,7 @@ Claude will find the plan, ask which phase to execute, confirm, and start implem
 2. Load the stack skills already installed by your profile (e.g. `django-patterns`, `commit-conventions`)
 3. Implement each task in order
 4. Write tests alongside implementation
-5. Commit frequently with clear messages
+5. Leave changes uncommitted — the verifier commits after the phase passes
 6. If the phase produces an API, generate an integration summary
 
 **Your job during execution:**
@@ -306,7 +306,7 @@ Claude will find the plan, ask which phase to execute, confirm, and start implem
 - Touching files outside the phase's scope
 - Skipping tests ("I'll add those later")
 - Making assumptions about other phases' work
-- Not committing frequently enough
+- Committing before verification has passed
 
 **After execution completes,** Claude will summarize what was done, list commits, flag any deviations, and suggest running `/verify` in a new session.
 
@@ -356,7 +356,7 @@ Claude will find the plan, identify the phase from recent git history, and syste
 5. Scope (nothing extra, nothing missing)
 6. Cross-repo contracts match (if applicable)
 
-It produces a `verification-report.md` with a results table and verdict.
+It writes a verification report to the project root's `docs/verification/phase-N-[name].md` with a results table and verdict.
 
 **The report will flag issues as:**
 
@@ -366,7 +366,7 @@ It produces a `verification-report.md` with a results table and verdict.
 
 **If there are FAILs:** Fix them in this session or go back to step 3. Re-verify after fixes.
 
-**If everything passes:** Move to the next phase.
+**If everything passes:** The reviewer commits the phase (implementation + verification report). Move to the next phase.
 
 ---
 

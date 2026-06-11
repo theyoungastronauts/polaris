@@ -66,7 +66,7 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] Open Claude Code session
 - [ ] `/execute` — picks up the plan, confirms the phase, implements on main
 - [ ] When done, start a **new** Claude session
-- [ ] `/verify` — checks the work against the plan, produces verification report
+- [ ] `/verify` — checks the work against the plan, produces verification report, commits on PASS
 - [ ] Fix any FAILs, then move to next phase
 - [ ] `/remember` — capture any decisions, conventions, or patterns worth preserving
 
