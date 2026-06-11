@@ -74,7 +74,7 @@ Ask the user for these values (provide defaults where shown):
 ├── Procfile
 ├── manage.py
 ├── requirements.txt
-├── runtime.txt
+├── .python-version
 ├── .env.example
 ├── .gitignore
 └── .coveragerc
@@ -121,7 +121,7 @@ Ask the user for these values (provide defaults where shown):
 ├── Procfile
 ├── manage.py
 ├── requirements.txt
-├── runtime.txt
+├── .python-version
 ├── .env.example
 ├── .gitignore
 └── .coveragerc
@@ -177,7 +177,7 @@ Ask the user for these values (provide defaults where shown):
 ├── Procfile
 ├── manage.py
 ├── requirements.txt
-├── runtime.txt
+├── .python-version
 ├── .env.example
 ├── .gitignore
 └── .coveragerc
@@ -1323,7 +1323,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
 
   db:
-    image: postgres:16
+    image: postgres:17
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -1360,7 +1360,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
 
   db:
-    image: postgres:16
+    image: postgres:17
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -1403,7 +1403,7 @@ services:
       - DATABASE_URL=postgres://postgres:postgres@db:5432/{db_name}
 
   db:
-    image: postgres:16
+    image: postgres:17
     volumes:
       - postgres_data:/var/lib/postgresql/data
     environment:
@@ -1870,10 +1870,10 @@ worker: celery --app=project worker --loglevel=INFO --concurrency=2 --without-he
 beat: celery --app=project beat --loglevel=INFO
 ```
 
-### runtime.txt `[ALL]`
+### .python-version `[ALL]`
 
 ```
-python-3.12.8
+3.12
 ```
 
 ### .github/workflows/deploy-backend.yml `[FULL]`
@@ -1911,8 +1911,8 @@ jobs:
 **`[MINIMAL]`:**
 
 ```
-Django>=5.1,<5.2
-djangorestframework>=3.15,<4.0
+Django>=5.2,<6.0
+djangorestframework>=3.16,<4.0
 django-cors-headers>=4.4,<5.0
 django-environ>=0.11,<1.0
 django-admin-interface>=0.28,<1.0
@@ -1928,9 +1928,9 @@ ruff>=0.7,<1.0
 **`[STANDARD]`** (adds simplejwt, redis, sentry-sdk, storages):
 
 ```
-Django>=5.1,<5.2
-djangorestframework>=3.15,<4.0
-djangorestframework-simplejwt>=5.3,<6.0
+Django>=5.2,<6.0
+djangorestframework>=3.16,<4.0
+djangorestframework-simplejwt>=5.5,<6.0
 django-cors-headers>=4.4,<5.0
 django-environ>=0.11,<1.0
 django-storages[boto3]>=1.14,<2.0
@@ -1949,9 +1949,9 @@ ruff>=0.7,<1.0
 **`[FULL]`** (adds celery, boto3, requests):
 
 ```
-Django>=5.1,<5.2
-djangorestframework>=3.15,<4.0
-djangorestframework-simplejwt>=5.3,<6.0
+Django>=5.2,<6.0
+djangorestframework>=3.16,<4.0
+djangorestframework-simplejwt>=5.5,<6.0
 django-cors-headers>=4.4,<5.0
 django-environ>=0.11,<1.0
 django-storages[boto3]>=1.14,<2.0
@@ -2256,7 +2256,7 @@ Only generate this section if the user requests AI/LLM integration.
 from .environment import ENV
 
 ANTHROPIC_API_KEY = ENV.str("ANTHROPIC_API_KEY", default="")
-ANTHROPIC_MODEL = ENV.str("ANTHROPIC_MODEL", default="claude-sonnet-4-5-20250929")
+ANTHROPIC_MODEL = ENV.str("ANTHROPIC_MODEL", default="claude-sonnet-4-6")
 ANTHROPIC_MAX_TOKENS = ENV.int("ANTHROPIC_MAX_TOKENS", default=4096)
 ```
 

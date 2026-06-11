@@ -64,7 +64,7 @@ Systematic verification checklist for Astro sites. Used by the reviewer agent af
 - [ ] Consistent naming conventions
 
 ### 10. Development Environment
-- [ ] `Dockerfile.dev` exists and uses `node:20-alpine`
+- [ ] `Dockerfile.dev` exists and uses a supported LTS Node image (`node:22-alpine` or newer)
 - [ ] `docker-compose.yml` exists with volume mounts
 - [ ] `Makefile` exists and wraps all commands via `docker compose exec`
 - [ ] No `npm run` / `npx` commands used directly on host

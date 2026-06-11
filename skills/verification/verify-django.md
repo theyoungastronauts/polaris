@@ -54,7 +54,7 @@ Run through each section. Flag issues as PASS, WARN, or FAIL.
 
 ### 8. Development Environment
 - [ ] `Dockerfile.dev` exists
-- [ ] `docker-compose.yml` exists with all required services (web, db, redis, celery, celery-beat)
+- [ ] `docker-compose.yml` has the services for the project's blueprint tier — minimal: web + db; standard: + redis; full: + celery + celery-beat (check which tier the project was bootstrapped with)
 - [ ] `Makefile` exists and wraps all commands via `docker compose exec`
 - [ ] No `python manage.py` commands used directly on host
 
