@@ -37,6 +37,7 @@ Commands:
   status                Show what's installed and if anything is stale
   list-profiles         List available profiles and stacks
   list-skills           List all available skills and agents
+  validate              Lint profiles (missing files, dup commands, snippets)
 
 Options:
   --stack, -s NAME      Stack to install (repeatable: --stack django --stack nextjs)
@@ -97,12 +98,11 @@ REQUIRED_SETTINGS='
     "allow": [
       "Read",
       "Edit",
-      "MultiEdit",
       "Write",
       "Glob",
       "Grep",
-      "LS",
       "Task",
+      "Agent",
       "WebFetch",
       "WebSearch",
       "Bash",
@@ -116,7 +116,7 @@ REQUIRED_SETTINGS='
     ],
     "deny": [
       "Bash(rm -rf /)",
-      "Bash(sudo rm -rf *)"
+      "Bash(sudo rm -rf:*)"
     ]
   },
   "enabledPlugins": {
@@ -194,8 +194,11 @@ _install_alias() {
         if [[ "$existing" == "$ALIAS_LINE" ]]; then
             ok "Shell alias already set in $profile"
         else
-            # Replace the old alias line
-            sed -i '' "s|alias polaris=.*|${ALIAS_LINE}|" "$profile"
+            # Replace the old alias line (temp file keeps this portable across BSD/GNU sed)
+            local tmp
+            tmp="$(mktemp)"
+            sed "s|alias polaris=.*|${ALIAS_LINE}|" "$profile" > "$tmp"
+            mv "$tmp" "$profile"
             ok "Updated shell alias in $profile"
             info "Run: source $profile (or open a new terminal)"
         fi
@@ -359,17 +362,20 @@ _write_manifest() {
         files_json+="\"$path\""
     done < <(echo "$profile_lines" | _profile_lines_to_paths)
 
-    # Add context scaffold files if they exist
-    for ctx_file in context/ROUTER.md context/architecture.md context/decisions.md context/conventions.md context/patterns/README.md; do
-        if [[ -f "$claude_dir/$ctx_file" ]]; then
-            if [[ "$first" == "true" ]]; then
-                first=false
-            else
-                files_json+=", "
+    # Track context scaffold files only when this run created them —
+    # a pre-existing context/ belongs to the user, not Polaris
+    if [[ "${CONTEXT_TEMPLATES_COPIED:-false}" == "true" ]]; then
+        for ctx_file in context/ROUTER.md context/decisions.md context/conventions.md context/patterns/README.md; do
+            if [[ -f "$claude_dir/$ctx_file" ]]; then
+                if [[ "$first" == "true" ]]; then
+                    first=false
+                else
+                    files_json+=", "
+                fi
+                files_json+="\"$ctx_file\""
             fi
-            files_json+="\"$ctx_file\""
-        fi
-    done
+        done
+    fi
     files_json+="]"
 
     cat > "$manifest" <<EOF
@@ -422,6 +428,31 @@ read_profile() {
 
 # ---- Clean / uninstall helpers ----
 
+# Map an installed context file back to its pristine template in the repo
+_context_template_for() {
+    case "$1" in
+        context/ROUTER.md)          echo "templates/context/ROUTER.md" ;;
+        context/decisions.md)       echo "templates/context/decisions.md" ;;
+        context/conventions.md)     echo "templates/context/conventions.md" ;;
+        context/patterns/README.md) echo "templates/context/patterns/README.md" ;;
+        *)                          echo "" ;;
+    esac
+}
+
+# True if an installed context file is still the unmodified template.
+# Populated context files (via /intel or /remember) are user content.
+_is_pristine_context_file() {
+    local claude_dir="$1"
+    local rel_path="$2"
+    local template
+    template="$(_context_template_for "$rel_path")"
+    [[ -n "$template" && -f "$SKILLS_REPO/$template" ]] || return 1
+    local src_hash dest_hash
+    src_hash="$(shasum -a 256 "$SKILLS_REPO/$template" | cut -d' ' -f1)"
+    dest_hash="$(shasum -a 256 "$claude_dir/$rel_path" | cut -d' ' -f1)"
+    [[ "$src_hash" == "$dest_hash" ]]
+}
+
 # Remove Polaris-installed files from a project
 # Args: claude_dir, dry_run
 _clean_project() {
@@ -440,6 +471,12 @@ _clean_project() {
             [[ -z "$rel_path" ]] && continue
             local target="$claude_dir/$rel_path"
             if [[ -f "$target" ]]; then
+                # Context files that no longer match the pristine templates hold
+                # project knowledge — never delete those.
+                if [[ "$rel_path" == context/* ]] && ! _is_pristine_context_file "$claude_dir" "$rel_path"; then
+                    info "  preserved (project content): $rel_path"
+                    continue
+                fi
                 if [[ "$dry_run" == "true" ]]; then
                     echo "  would remove: $rel_path"
                 else
@@ -452,7 +489,7 @@ _clean_project() {
     else
         # No manifest — remove standard Polaris directories
         warn "No manifest found — removing standard Polaris directories"
-        for subdir in skills agents workflows templates context; do
+        for subdir in skills agents workflows templates; do
             if [[ -d "$claude_dir/$subdir" ]]; then
                 if [[ "$dry_run" == "true" ]]; then
                     echo "  would remove: $subdir/"
@@ -463,6 +500,25 @@ _clean_project() {
                 (( removed++ )) || true
             fi
         done
+        # Context scaffold: remove only files still identical to the pristine
+        # templates; populated ones hold project knowledge
+        if [[ -d "$claude_dir/context" ]]; then
+            local ctx
+            for ctx in context/ROUTER.md context/decisions.md context/conventions.md context/patterns/README.md; do
+                if [[ -f "$claude_dir/$ctx" ]] && _is_pristine_context_file "$claude_dir" "$ctx"; then
+                    if [[ "$dry_run" == "true" ]]; then
+                        echo "  would remove: $ctx"
+                    else
+                        rm "$claude_dir/$ctx"
+                        echo "  removed: $ctx"
+                    fi
+                    (( removed++ )) || true
+                fi
+            done
+            if find "$claude_dir/context" -type f 2>/dev/null | grep -q .; then
+                warn "Kept context/ files with project content — delete manually if unwanted"
+            fi
+        fi
         # Remove all commands (can't distinguish Polaris vs user without manifest)
         if [[ -d "$claude_dir/commands" ]]; then
             if [[ "$dry_run" == "true" ]]; then
@@ -582,19 +638,6 @@ _discover_stacks() {
             basename "$f" .txt
         fi
     done
-}
-
-# Look up a stack's directory from the parallel arrays STACK_NAMES / STACK_DIRS
-_get_stack_dir() {
-    local name="$1"
-    local i
-    for (( i=0; i<${#STACK_NAMES[@]}; i++ )); do
-        if [[ "${STACK_NAMES[$i]}" == "$name" ]]; then
-            echo "${STACK_DIRS[$i]}"
-            return
-        fi
-    done
-    echo ""
 }
 
 # Set a stack's directory in the parallel arrays
@@ -724,7 +767,7 @@ _interactive_select() {
         local label="$_STACK_LABEL"
         local dir="${STACK_DIRS[$i]}"
         local cap_category
-        cap_category="$(echo "$category" | sed 's/^./\U&/')"
+        cap_category="$(printf '%s' "${category:0:1}" | tr '[:lower:]' '[:upper:]')${category:1}"
         echo "  ${cap_category}: ${label} → ${dir}/"
     done
     echo ""
@@ -1208,6 +1251,7 @@ _install_context_templates() {
 
     if [[ "$dry_run" == "true" ]]; then
         echo "  would copy: templates/context/ → $context_dir/"
+        CONTEXT_TEMPLATES_COPIED="true"
         return 0
     fi
 
@@ -1216,6 +1260,7 @@ _install_context_templates() {
     cp "$template_dir/decisions.md" "$context_dir/decisions.md"
     cp "$template_dir/conventions.md" "$context_dir/conventions.md"
     cp "$template_dir/patterns/README.md" "$context_dir/patterns/README.md"
+    CONTEXT_TEMPLATES_COPIED="true"
     ok "  copied context scaffold templates to context/"
     info "  Run /intel to populate with project-specific content"
 }
@@ -1225,8 +1270,8 @@ _install_stacks() {
     local dry_run="$2"
     local force="$3"
     local no_claude_md="$4"
-    local fresh="${5:-false}"
-    shift 5 2>/dev/null || shift 4
+    local fresh="$5"
+    shift 5
     local extras=("$@")
 
     # Build descriptor
@@ -1328,7 +1373,8 @@ cmd_new() {
     local dry_run="$2"
     local force="$3"
     local no_claude_md="$4"
-    shift 4
+    local fresh="$5"
+    shift 5
     local extras=("$@")
 
     if [[ -z "$project_path" ]]; then
@@ -1402,8 +1448,8 @@ cmd_new() {
 
     # Install stacks into project
     local claude_dir="$project_path/.claude"
-    mkdir -p "$claude_dir"
-    _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "${extras[@]+"${extras[@]}"}"
+    [[ "$dry_run" == "true" ]] || mkdir -p "$claude_dir"
+    _install_stacks "$claude_dir" "$dry_run" "$force" "$no_claude_md" "$fresh" "${extras[@]+"${extras[@]}"}"
 
     echo ""
     ok "Project ready at $project_path"
@@ -1441,7 +1487,7 @@ cmd_project() {
     local project_dir
     project_dir="$(_resolve_project_dir "$target")"
     local claude_dir="$project_dir/.claude"
-    mkdir -p "$claude_dir"
+    [[ "$dry_run" == "true" ]] || mkdir -p "$claude_dir"
 
     # Clean existing Polaris files if requested
     if [[ "$clean" == "true" ]]; then
@@ -1637,6 +1683,66 @@ cmd_list_skills() {
     done
 }
 
+# Lint the repo: every profile line must resolve to a real file, stack
+# profiles need a companion .claude.md, and command names must not collide
+# within a profile. Run before committing profile or skill changes.
+cmd_validate() {
+    local errors=0
+
+    info "Validating profiles..."
+    for f in "$SCRIPT_DIR"/profiles/*.txt; do
+        [[ -f "$f" ]] || continue
+        local pname
+        pname="$(basename "$f" .txt)"
+        local cmd_names=()
+
+        while IFS= read -r line; do
+            local src="$line"
+            if [[ "$line" == cmd:* ]]; then
+                local cmd_part="${line#cmd:}"
+                local cmd_name="${cmd_part%%=*}"
+                src="${cmd_part#*=}"
+                if [[ "$cmd_part" != *=* ]]; then
+                    err "  $pname: malformed cmd line (expected cmd:name=path): $line"
+                    (( errors++ )) || true
+                    continue
+                fi
+                local seen
+                for seen in "${cmd_names[@]+"${cmd_names[@]}"}"; do
+                    if [[ "$seen" == "$cmd_name" ]]; then
+                        err "  $pname: duplicate command name: /$cmd_name"
+                        (( errors++ )) || true
+                    fi
+                done
+                cmd_names+=("$cmd_name")
+            elif [[ "$line" != skills/* && "$line" != agents/* && "$line" != workflows/* && "$line" != templates/* ]]; then
+                err "  $pname: line won't be listed in CLAUDE.md (unknown category): $line"
+                (( errors++ )) || true
+            fi
+            if [[ ! -f "$SCRIPT_DIR/$src" ]]; then
+                err "  $pname: missing file: $src"
+                (( errors++ )) || true
+            elif ! grep -q -m1 '^#\{1,2\} ' "$SCRIPT_DIR/$src"; then
+                warn "  $pname: no markdown title in $src (CLAUDE.md entry will use filename)"
+            fi
+        done < <(grep -v '^\s*#' "$f" | grep -v '^\s*$')
+
+        # Stack profiles need a companion CLAUDE.md snippet
+        _read_profile_metadata "$f"
+        if [[ -n "$_STACK_TYPE" && ! -f "$SCRIPT_DIR/profiles/${pname}.claude.md" ]]; then
+            err "  $pname: stack profile missing companion snippet profiles/${pname}.claude.md"
+            (( errors++ )) || true
+        fi
+    done
+
+    echo ""
+    if [[ $errors -gt 0 ]]; then
+        err "Validation failed: $errors error(s)"
+        exit 1
+    fi
+    ok "All profiles valid"
+}
+
 # ---- Main ----
 
 COMMAND="${1:-}"
@@ -1648,6 +1754,7 @@ FRESH="false"
 CLEAN="false"
 NO_CLAUDE_MD="false"
 STANDALONE="false"
+CONTEXT_TEMPLATES_COPIED="false"
 PROFILE=""
 TARGET=""
 NEW_PATH=""
@@ -1690,11 +1797,12 @@ done
 case "$COMMAND" in
     init)           cmd_init ;;
     global)         cmd_global "$DRY_RUN" "$FORCE" "$FRESH" "$NO_CLAUDE_MD" ;;
-    new)            cmd_new "$NEW_PATH" "$DRY_RUN" "$FORCE" "$NO_CLAUDE_MD" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
+    new)            cmd_new "$NEW_PATH" "$DRY_RUN" "$FORCE" "$NO_CLAUDE_MD" "$FRESH" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
     project)        cmd_project "$PROFILE" "$DRY_RUN" "$FORCE" "$TARGET" "$FRESH" "$NO_CLAUDE_MD" "$CLEAN" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
     uninstall)      cmd_uninstall "$DRY_RUN" "$TARGET" ;;
     status)         cmd_status ;;
     list-profiles)  cmd_list_profiles ;;
     list-skills)    cmd_list_skills ;;
+    validate)       cmd_validate ;;
     *)              usage ;;
 esac
