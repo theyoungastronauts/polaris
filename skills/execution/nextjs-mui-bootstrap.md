@@ -202,7 +202,7 @@ export default eslintConfig;
 ### .nvmrc
 
 ```
-v20.19.5
+22
 ```
 
 ### .env.local
@@ -1430,7 +1430,7 @@ import Image from 'next/image';
 ### Dockerfile.dev
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 

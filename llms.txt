@@ -1,4 +1,4 @@
-# Polaris — llm.txt
+# Polaris — llms.txt
 
 > A modular skills/agents/workflows system for AI-assisted development with Claude Code.
 > This file is a concise reference for AI agents. For full details, see the linked files.
@@ -17,17 +17,18 @@ context-pull.sh         Extracts Django backend context for frontend sessions
 skills/
   planning/             Brainstorming, plan-and-scope, phase-breakdown, scaffold
   ux/                   PRD, UX spec, UX-to-prompts
-  execution/            Stack patterns + bootstrap (Django, Next.js, Flutter, Astro)
-                        Also: execute-phase, autopilot, cross-repo-context, visual-feedback,
-                        react-best-practices, tailwind-v4-design-system,
-                        work-discipline, axon-code-intel
-  verification/         verify-phase + per-stack checklists (Django, Next.js, Flutter, Astro)
-  writing/              Clear writing guidelines
+  execution/            Stack patterns + bootstrap (Django, Next.js, Next.js full-stack, Flutter, Astro)
+                        Also: execute-phase, autopilot, orchestrator, architecture-intel,
+                        cross-repo-context, visual-feedback, react-best-practices,
+                        tailwind-v4-design-system, work-discipline, axon-code-intel
+  verification/         verify-phase + per-stack checklists (Django, Next.js, Next.js full-stack, Flutter, Astro)
+  writing/              Clear writing guidelines, write-as-human
+  memory/               Project context lifecycle (/remember, /recall)
   meta/                 Writing new skills, session reflection
   git/                  Commit conventions, worktrees
-agents/                 planner, executor, reviewer, integrator, design-intake
+agents/                 planner, executor, reviewer, integrator, design-intake, drift-detector
 workflows/              full-feature.md (end-to-end workflow)
-templates/              integration-summary.md (API contract template)
+templates/              integration-summary.md, context/ scaffold templates
 profiles/               Stack manifests (.txt) + CLAUDE.md snippets (.claude.md)
 ```
 
@@ -60,11 +61,14 @@ Select a backend + 0..N frontends. Each profile lists which skills to install.
 
 | Profile | Type | Default Dir | Details |
 |---------|------|-------------|---------|
-| `global` | — | `~/.claude/` | Planning, writing, git, meta skills + agents |
+| `global` | — | `~/.claude/` | Planning, writing, git, memory, meta skills + agents |
 | `django` | backend | `server` | Django/DRF patterns + verification |
-| `nextjs` | frontend | `web` | Next.js + React/Tailwind as on-demand commands |
+| `nextjs-fullstack` | backend | `web` | Full-stack Next.js (Drizzle, Postgres, Redis, BullMQ, Auth.js) — pair with a Next.js frontend profile |
+| `nextjs` | frontend | `web` | Next.js (DaisyUI) + React/Tailwind as on-demand commands |
+| `nextjs-shadcn` | frontend | `web` | Next.js (ShadCN UI) variant |
+| `nextjs-mui` | frontend | `web` | Next.js (Material UI) variant |
 | `flutter` | frontend | `mobile` | Flutter patterns + verification |
-| `astro` | frontend | `web` | Astro patterns + verification |
+| `astro` | frontend | `landing` | Astro patterns + verification |
 
 Multi-stack installs auto-add `_multi-stack.txt` (integrator agent, cross-repo-context, integration summary template).
 
@@ -99,10 +103,11 @@ Skills are self-contained markdown files. No dependencies between skills.
 | Agent | Role | Input | Output |
 |-------|------|-------|--------|
 | **planner** | Design → phased plan | Design docs in `docs/plans/` | `plan.md` |
-| **executor** | Implement a single phase | `plan.md` + assigned phase | Code on branch + integration summary |
+| **executor** | Implement a single phase | `plan.md` + assigned phase | Uncommitted changes + integration summary |
 | **reviewer** | Verify completed phase | `plan.md` + recent changes | Verification report (PASS/WARN/FAIL) |
 | **integrator** | Bridge backend↔frontend | Backend code | Integration summary (API contracts) |
 | **design-intake** | Distill design artifacts | Files in `docs/design/` | Structured design doc |
+| **drift-detector** | Catch convention drift | `.claude/context/` + recent changes | Drift report (aligned/drifted/undocumented) |
 
 → Detailed agent files: `agents/`
 
@@ -118,10 +123,16 @@ Installed to `.claude/commands/` — only loaded when invoked.
 | `/execute` | Execute a phase of the plan |
 | `/verify` | Verify a completed phase |
 | `/autopilot` | Autonomous phase loop (execute → test → verify → commit) |
+| `/orchestrator` | Flexible task orchestration (parallel waves, auto-phasing, model overrides) |
 | `/scaffold` | Create project from plan |
+| `/intel` | Generate/update the project context scaffold |
+| `/remember` | Save a decision, convention, or pattern to the scaffold |
+| `/recall` | Load relevant project context at session start |
 | `/reflect` | Session reflection/retrospective |
+| `/write-as-human` | Strip AI writing patterns from prose |
 | `/django-bootstrap` | Scaffold Django project |
-| `/nextjs-bootstrap` | Scaffold Next.js project |
+| `/nextjs-bootstrap` | Scaffold Next.js project (DaisyUI/ShadCN/MUI per profile) |
+| `/nextjs-fullstack-bootstrap` | Scaffold full-stack Next.js project |
 | `/flutter-bootstrap` | Scaffold Flutter project |
 | `/astro-bootstrap` | Scaffold Astro project |
 | `/react` | React best practices reference |
@@ -137,8 +148,8 @@ Installed to `.claude/commands/` — only loaded when invoked.
 3. **Plan** (new session) — Planner agent → `plan.md` with phased implementation
 4. **Scaffold** — `/scaffold` creates sub-project dirs, git inits, installs profiles
 5. **Execute + Verify** (per phase, separate sessions):
-   - `/execute` — Implements phase on main
-   - `/verify` — Reviews in fresh session, produces PASS/WARN/FAIL report
+   - `/execute` — Implements phase on main (leaves changes uncommitted)
+   - `/verify` — Reviews in fresh session, produces PASS/WARN/FAIL report, commits on PASS
    - Fix FAILs, move to next phase
    - OR: `/autopilot` for hands-off loop through all phases
 6. **Cross-repo handoff** — Backend generates integration summary → frontend pulls context via `context-pull.sh`

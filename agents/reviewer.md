@@ -1,3 +1,8 @@
+---
+name: reviewer
+description: Verifies a completed phase against plan.md, produces a verification report, and commits on PASS. Use for phase verification with fresh eyes, separate from the executor.
+---
+
 # Agent: Reviewer
 
 ## Role

@@ -1,3 +1,8 @@
+---
+name: design-intake
+description: Distills design artifacts in docs/design/ (briefs, wireframes, sitemaps, flows) into a structured design doc downstream agents can act on. Use when starting from existing design work.
+---
+
 # Agent: Design Intake
 
 ## Role

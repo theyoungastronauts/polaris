@@ -66,7 +66,7 @@ Create a request document:
 
 ## When to Pull Backend Context Directly
 
-Sometimes the integration summary isn't enough. Use the `context-pull.sh` script to extract relevant backend code when:
+Sometimes the integration summary isn't enough. Use the `context-pull.sh` script (in the Polaris repo — e.g. `~/prj/polaris/context-pull.sh ../backend-api`) to extract relevant backend code when:
 - Debugging a mismatch between expected and actual API behavior
 - The integration summary is outdated or incomplete
 - You need to understand validation rules or business logic

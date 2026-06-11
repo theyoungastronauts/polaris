@@ -113,5 +113,10 @@ mkdir -p "$OUTPUT_DIR"
 
 } > "$OUTPUT"
 
+FILE_COUNT="$(grep -c '^## `' "$OUTPUT" || true)"
+LINE_COUNT="$(wc -l < "$OUTPUT" | tr -d ' ')"
 echo "✓ Backend context extracted to $OUTPUT"
-echo "  Include $(wc -l < "$OUTPUT" | tr -d ' ') lines from $(find "$BACKEND_PATH" -name "*.py" -path "*/serializers*" -o -name "*.py" -path "*/views*" -o -name "*.py" -path "*/models*" | wc -l | tr -d ' ') files"
+echo "  $LINE_COUNT lines from $FILE_COUNT files"
+if [[ "$FILE_COUNT" == "0" ]]; then
+    echo "  Warning: no matching backend files found — check the path (and --apps filter)"
+fi

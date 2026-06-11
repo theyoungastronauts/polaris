@@ -23,7 +23,7 @@ Typical patterns:
 
 Create a team named "autopilot" using TeamCreate.
 
-Spawn two teammates using the Task tool with `team_name: "autopilot"`:
+Spawn two teammates using the Agent tool (named Task in older Claude Code versions) with `team_name: "autopilot"`:
 
 **Executor** (name: "executor", subagent_type: "general-purpose"):
 > You are an execution agent. Read the executor agent definition in `.claude/agents/executor.md` (or `agents/executor.md`) for your role. You will receive messages assigning you phases to implement. For each assignment: read plan.md, find the phase, and implement all tasks. Do NOT enter plan mode — the plan is pre-approved. Do NOT commit. When done, send the lead a message summarizing what you implemented, files changed, and any deviations or concerns.

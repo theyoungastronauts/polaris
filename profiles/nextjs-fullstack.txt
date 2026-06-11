@@ -3,10 +3,14 @@
 # directory: web
 #
 # Full-stack Next.js backend — Drizzle ORM, Postgres, Redis, BullMQ, Auth.js
-# Pair with a Next.js frontend profile for UI library choice
+# Pair with a Next.js frontend profile for UI library choice.
+# Base frontend skills are listed here too so a standalone install still
+# gets component/styling conventions (deduped when paired with a frontend).
 
 skills/execution/nextjs-fullstack-patterns.md
+skills/execution/nextjs-patterns.md
 skills/verification/verify-nextjs-fullstack.md
+skills/verification/verify-nextjs.md
 agents/executor.md
 templates/integration-summary.md
 

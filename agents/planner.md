@@ -1,3 +1,8 @@
+---
+name: planner
+description: Turns design docs (brainstorms, PRDs, UX specs in docs/plans/) into a phased plan.md. Use when the user asks to create or revise an implementation plan.
+---
+
 # Agent: Planner
 
 ## Role

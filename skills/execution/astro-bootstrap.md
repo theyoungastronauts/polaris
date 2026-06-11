@@ -562,7 +562,7 @@ export default function AgentationOverlay() {
 ### Dockerfile.dev
 
 ```dockerfile
-FROM node:20-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 

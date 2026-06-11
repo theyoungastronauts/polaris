@@ -207,7 +207,6 @@ export * from "./posts";
 ```ts
 import { pgTable, serial, text, timestamp, uuid } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
-import { createId } from "@paralleldrive/cuid2";
 
 export const posts = pgTable("posts", {
   id: serial("id").primaryKey(),
@@ -312,7 +311,9 @@ import { users } from "@/lib/db/schema";
 
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: DrizzleAdapter(db),
-  session: { strategy: "database" },
+  // Credentials logins never create database session rows in Auth.js —
+  // the JWT strategy is required for them to work, even with an adapter
+  session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
   },
@@ -346,8 +347,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // Google({ clientId: process.env.GOOGLE_CLIENT_ID!, clientSecret: process.env.GOOGLE_CLIENT_SECRET! }),
   ],
   callbacks: {
-    session({ session, user }) {
-      session.user.id = user.id;
+    jwt({ token, user }) {
+      if (user) token.id = user.id;
+      return token;
+    },
+    session({ session, token }) {
+      session.user.id = token.id as string;
       return session;
     },
   },
@@ -878,7 +883,7 @@ logs-worker:
     "drizzle-orm": "^0.38",
     "pg": "^8.13",
     "zod": "^3.24",
-    "next-auth": "^5.0",
+    "next-auth": "beta",
     "@auth/drizzle-adapter": "^1.7",
     "bcryptjs": "^2.4",
     "ioredis": "^5.4"
@@ -899,7 +904,7 @@ logs-worker:
     "drizzle-orm": "^0.38",
     "pg": "^8.13",
     "zod": "^3.24",
-    "next-auth": "^5.0",
+    "next-auth": "beta",
     "@auth/drizzle-adapter": "^1.7",
     "bcryptjs": "^2.4",
     "ioredis": "^5.4",

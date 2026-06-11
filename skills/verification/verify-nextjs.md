@@ -19,9 +19,12 @@ Systematic verification checklist for Next.js/React code. Used by the reviewer a
 - [ ] Key props on list items
 
 ### 3. Data Fetching
+
+Match the project's architecture mode (see CLAUDE.md / nextjs-patterns): SSR-centric projects use route-level conventions, frontend-centric projects manage state in client components.
+
 - [ ] No waterfalls — parallel fetches where possible
-- [ ] Loading states handled (loading.tsx or Suspense)
-- [ ] Error states handled (error.tsx or error boundaries)
+- [ ] Loading states handled (SSR: loading.tsx or Suspense; frontend-centric: loading flags in state, reset in `finally`)
+- [ ] Error states handled (SSR: error.tsx or error boundaries; frontend-centric: error state + user-visible message)
 - [ ] Caching strategy is intentional (not accidental)
 
 ### 4. Types
@@ -55,7 +58,7 @@ Systematic verification checklist for Next.js/React code. Used by the reviewer a
 - [ ] Consistent naming conventions
 
 ### 9. Development Environment
-- [ ] `Dockerfile.dev` exists and uses `node:20-alpine`
+- [ ] `Dockerfile.dev` exists and uses a supported LTS Node image (`node:22-alpine` or newer)
 - [ ] `docker-compose.yml` exists with volume mounts and `WATCHPACK_POLLING`
 - [ ] `Makefile` exists and wraps all commands via `docker compose exec`
 - [ ] No `npm run` / `npx` commands used directly on host

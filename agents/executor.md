@@ -1,3 +1,8 @@
+---
+name: executor
+description: Implements a single phase from plan.md. Writes tests alongside code and leaves changes uncommitted for the reviewer. Use when executing a planned phase.
+---
+
 # Agent: Executor
 
 ## Role
