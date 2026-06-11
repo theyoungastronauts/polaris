@@ -1,3 +1,8 @@
+---
+name: drift-detector
+description: Compares recent code changes against the conventions documented in .claude/context/ and reports aligned/drifted/undocumented findings. Use after the context scaffold exists.
+---
+
 # Agent: Drift Detector
 
 ## Role

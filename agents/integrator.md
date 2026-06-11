@@ -1,3 +1,8 @@
+---
+name: integrator
+description: Bridges decoupled backend and frontend repos — generates integration summaries from backend code, or condenses backend context for frontend work. Use around cross-repo API handoffs.
+---
+
 # Agent: Integrator
 
 ## Role
