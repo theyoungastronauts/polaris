@@ -34,6 +34,7 @@ Commands:
   new <path>            Create a new project with stack context (for brainstorming)
   project               Install skills into a project's .claude/ (interactive stack selection)
   uninstall             Remove Polaris from a project (preserves user content)
+  hooks <sub>           Manage optional session hooks (install|status|uninstall)
   status                Show what's installed and if anything is stale
   list-profiles         List available profiles and stacks
   list-skills           List all available skills and agents
@@ -67,6 +68,10 @@ Examples:
   ./install.sh project --profile django                  # legacy single-profile mode
   ./install.sh uninstall                                 # remove Polaris from project
   ./install.sh uninstall --target ~/prj/my-app           # remove from specific project
+  ./install.sh hooks install                             # install minimal hooks into project
+  ./install.sh hooks install --profile minimal --dry-run # preview hook install
+  ./install.sh hooks status                              # show hook profile + freshness
+  ./install.sh hooks uninstall                           # remove Polaris hooks
   ./install.sh status
 EOF
     exit 1
@@ -1540,6 +1545,239 @@ cmd_uninstall() {
     echo ""
 }
 
+# ---- Hooks (optional session guardrails) ----
+#
+# Hooks are the one place Polaris ships executable code instead of markdown.
+# They are opt-in (never installed by 'global' or 'project'), project-scoped,
+# and written as POSIX-friendly shell so the repo keeps a single runtime.
+
+HOOK_SCRIPTS=(
+    "polaris-session-start.sh"
+    "polaris-edited-file-accumulator.sh"
+    "polaris-stop-summary.sh"
+)
+
+# Strip any existing Polaris hook groups, then append the profile's hooks.
+# Idempotent: re-running install never duplicates entries. User hooks and
+# other settings keys are preserved.
+_HOOKS_MERGE_FILTER='
+  def strip(a): [ (a // [])[] | select( ([.hooks[]?.command] | map(test("polaris-")) | any) | not ) ];
+  .[0] as $existing | .[1] as $new |
+  ($existing + {hooks: ($existing.hooks // {})})
+  | reduce ($new.hooks | keys[]) as $evt (.;
+      .hooks[$evt] = ( strip(.hooks[$evt]) + $new.hooks[$evt] )
+    )
+'
+
+# Remove Polaris hook groups, drop emptied event arrays, and drop an empty
+# hooks object. Leaves user hooks and other settings untouched.
+_HOOKS_STRIP_FILTER='
+  def strip(a): [ (a // [])[] | select( ([.hooks[]?.command] | map(test("polaris-")) | any) | not ) ];
+  if (.hooks | type) == "object"
+  then .hooks |= ( with_entries(.value |= strip(.)) | with_entries(select(.value | length > 0)) )
+       | (if (.hooks | length) == 0 then del(.hooks) else . end)
+  else . end
+'
+
+# Record installed hooks under the manifest's "hooks" key
+_hooks_write_manifest() {
+    local claude_dir="$1"
+    local profile="$2"
+    local manifest="$claude_dir/$MANIFEST_FILE"
+    local timestamp
+    timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+
+    local files_json='['
+    local first=true s
+    for s in "${HOOK_SCRIPTS[@]}"; do
+        if [[ "$first" == "true" ]]; then first=false; else files_json+=', '; fi
+        files_json+="\"hooks/$s\""
+    done
+    files_json+=']'
+
+    local hooks_obj
+    hooks_obj="$(jq -n --arg p "$profile" --arg t "$timestamp" --argjson f "$files_json" \
+        '{profile:$p, installed_at:$t, files:$f}')"
+
+    if [[ -f "$manifest" ]]; then
+        local patched
+        patched="$(jq --argjson h "$hooks_obj" '.hooks = $h' "$manifest")"
+        printf '%s\n' "$patched" > "$manifest"
+    else
+        jq -n --argjson h "$hooks_obj" '{hooks:$h}' > "$manifest"
+    fi
+    ok "  recorded hooks in $MANIFEST_FILE"
+}
+
+_hooks_install() {
+    local claude_dir="$1"
+    local profile="$2"
+    local dry_run="$3"
+    local force="$4"
+
+    local fragment="$SCRIPT_DIR/hooks/${profile}.json"
+    if [[ ! -f "$fragment" ]]; then
+        err "Unknown hook profile: $profile (available: minimal)"
+        exit 1
+    fi
+
+    local settings_file="$claude_dir/settings.json"
+    local hooks_dir="$claude_dir/hooks"
+
+    info "Installing '$profile' hooks into $claude_dir/"
+
+    if [[ "$dry_run" == "true" ]]; then
+        echo "  would copy scripts to: $hooks_dir/"
+        for s in "${HOOK_SCRIPTS[@]}"; do echo "    hooks/$s"; done
+        echo "  would merge hook profile '$profile' into: $settings_file"
+        echo "  would record hooks in: $claude_dir/$MANIFEST_FILE"
+        return 0
+    fi
+
+    mkdir -p "$hooks_dir"
+    for s in "${HOOK_SCRIPTS[@]}"; do
+        cp "$SCRIPT_DIR/hooks/scripts/$s" "$hooks_dir/$s"
+        chmod +x "$hooks_dir/$s"
+        ok "  installed hook: hooks/$s"
+    done
+
+    if [[ -f "$settings_file" ]]; then
+        local merged
+        merged="$(jq -s "$_HOOKS_MERGE_FILTER" "$settings_file" "$fragment")"
+        printf '%s\n' "$merged" > "$settings_file"
+        ok "  merged hooks into settings.json"
+    else
+        jq '.' "$fragment" > "$settings_file"
+        ok "  created settings.json with hooks"
+    fi
+
+    _hooks_write_manifest "$claude_dir" "$profile"
+
+    ok "Hooks installed. Start a new Claude Code session to load them."
+}
+
+_hooks_uninstall() {
+    local claude_dir="$1"
+    local dry_run="$2"
+    local settings_file="$claude_dir/settings.json"
+    local hooks_dir="$claude_dir/hooks"
+
+    info "Removing Polaris hooks from $claude_dir/"
+
+    if [[ "$dry_run" == "true" ]]; then
+        echo "  would strip Polaris hooks from: $settings_file"
+        for s in "${HOOK_SCRIPTS[@]}"; do
+            [[ -f "$hooks_dir/$s" ]] && echo "  would remove: hooks/$s"
+        done
+        echo "  would clear hooks entry in manifest"
+        return 0
+    fi
+
+    if [[ -f "$settings_file" ]]; then
+        local stripped
+        stripped="$(jq "$_HOOKS_STRIP_FILTER" "$settings_file")"
+        printf '%s\n' "$stripped" > "$settings_file"
+        ok "  stripped Polaris hooks from settings.json"
+    fi
+
+    for s in "${HOOK_SCRIPTS[@]}"; do
+        if [[ -f "$hooks_dir/$s" ]]; then
+            rm -f "$hooks_dir/$s"
+            ok "  removed hooks/$s"
+        fi
+    done
+    rmdir "$hooks_dir" 2>/dev/null && info "  removed empty hooks/ dir" || true
+
+    local manifest="$claude_dir/$MANIFEST_FILE"
+    if [[ -f "$manifest" ]]; then
+        local patched
+        patched="$(jq 'del(.hooks)' "$manifest")"
+        printf '%s\n' "$patched" > "$manifest"
+    fi
+
+    ok "Hooks removed. Start a new Claude Code session to apply."
+}
+
+_hooks_status() {
+    local claude_dir="$1"
+    local settings_file="$claude_dir/settings.json"
+    local hooks_dir="$claude_dir/hooks"
+    local manifest="$claude_dir/$MANIFEST_FILE"
+
+    info "Hooks status for $claude_dir/"
+
+    local profile=""
+    if [[ -f "$manifest" ]]; then
+        profile="$(jq -r '.hooks.profile // empty' "$manifest" 2>/dev/null || true)"
+    fi
+    if [[ -n "$profile" ]]; then
+        ok "  profile: $profile"
+    else
+        warn "  no Polaris hooks recorded in manifest"
+    fi
+
+    if [[ -f "$settings_file" ]]; then
+        local count
+        count="$(jq '[.. | objects | .command? // empty | select(test("polaris-"))] | length' "$settings_file" 2>/dev/null || echo 0)"
+        if [[ "$count" -gt 0 ]]; then
+            ok "  settings.json: $count Polaris hook(s) wired"
+        else
+            warn "  settings.json: no Polaris hooks wired"
+        fi
+    else
+        warn "  settings.json not found"
+    fi
+
+    local s dest src sh dh
+    for s in "${HOOK_SCRIPTS[@]}"; do
+        dest="$hooks_dir/$s"
+        src="$SCRIPT_DIR/hooks/scripts/$s"
+        if [[ -f "$dest" ]]; then
+            sh="$(shasum -a 256 "$src" | cut -d' ' -f1)"
+            dh="$(shasum -a 256 "$dest" | cut -d' ' -f1)"
+            if [[ "$sh" == "$dh" ]]; then
+                ok "  current: hooks/$s"
+            else
+                warn "  stale:   hooks/$s (run 'polaris hooks install' to update)"
+            fi
+        else
+            warn "  missing: hooks/$s"
+        fi
+    done
+}
+
+cmd_hooks() {
+    local subcmd="$1"
+    local profile="$2"
+    local target="$3"
+    local dry_run="$4"
+    local force="$5"
+
+    ensure_init
+
+    if ! command -v jq &>/dev/null; then
+        err "Polaris hooks require jq for safe settings.json editing."
+        err "Install with: brew install jq"
+        exit 1
+    fi
+
+    [[ -z "$profile" ]] && profile="minimal"
+
+    local project_dir
+    project_dir="$(_resolve_project_dir "$target")"
+    local claude_dir="$project_dir/.claude"
+
+    case "$subcmd" in
+        install)   mkdir -p "$claude_dir"; _hooks_install "$claude_dir" "$profile" "$dry_run" "$force" ;;
+        uninstall) _hooks_uninstall "$claude_dir" "$dry_run" ;;
+        status)    _hooks_status "$claude_dir" ;;
+        ""|help)   echo "Usage: polaris hooks <install|status|uninstall> [--profile minimal] [--target DIR] [--dry-run]" ;;
+        *)         err "Unknown hooks subcommand: $subcmd"
+                   echo "Usage: polaris hooks <install|status|uninstall> [--profile minimal]"
+                   exit 1 ;;
+    esac
+}
+
 cmd_status() {
     ensure_init
 
@@ -1758,6 +1996,7 @@ CONTEXT_TEMPLATES_COPIED="false"
 PROFILE=""
 TARGET=""
 NEW_PATH=""
+HOOKS_SUBCMD=""
 EXTRAS=()
 STACK_NAMES=()
 STACK_DIRS=()
@@ -1765,6 +2004,12 @@ STACK_DIRS=()
 # Grab positional argument for 'new' command (path before any flags)
 if [[ "$COMMAND" == "new" && $# -gt 0 && "${1:0:1}" != "-" ]]; then
     NEW_PATH="$1"
+    shift
+fi
+
+# Grab subcommand for 'hooks' (install|status|uninstall before any flags)
+if [[ "$COMMAND" == "hooks" && $# -gt 0 && "${1:0:1}" != "-" ]]; then
+    HOOKS_SUBCMD="$1"
     shift
 fi
 
@@ -1800,6 +2045,7 @@ case "$COMMAND" in
     new)            cmd_new "$NEW_PATH" "$DRY_RUN" "$FORCE" "$NO_CLAUDE_MD" "$FRESH" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
     project)        cmd_project "$PROFILE" "$DRY_RUN" "$FORCE" "$TARGET" "$FRESH" "$NO_CLAUDE_MD" "$CLEAN" "${EXTRAS[@]+"${EXTRAS[@]}"}" ;;
     uninstall)      cmd_uninstall "$DRY_RUN" "$TARGET" ;;
+    hooks)          cmd_hooks "$HOOKS_SUBCMD" "$PROFILE" "$TARGET" "$DRY_RUN" "$FORCE" ;;
     status)         cmd_status ;;
     list-profiles)  cmd_list_profiles ;;
     list-skills)    cmd_list_skills ;;
