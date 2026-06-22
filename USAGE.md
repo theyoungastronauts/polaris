@@ -478,6 +478,7 @@ git worktree add ../api-billing -b feature/billing
 | 3-5 | Autopilot (alternative) | Sub-project | `/autopilot` command (pre-planned phases) |
 | 3-5 | Orchestrator (alternative) | Sub-project | `/orchestrator` command (flexible tasks, parallel, auto-phasing) |
 | 5 | Next phase | Sub-project | Repeat from 3 |
+| — | Optional session guardrails | Any project | `polaris hooks install` (see [hooks/README.md](hooks/README.md)) |
 | — | Load context at session start | Any repo | `/recall` command |
 | — | Capture decisions/patterns | Any repo (session end) | `/remember` command |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
