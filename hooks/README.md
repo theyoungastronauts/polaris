@@ -56,11 +56,17 @@ into your settings. Start a new Claude Code session to load the hooks.
 Lifecycle safety with almost no friction. Non-blocking; nothing here can stop a
 tool call or fail a session.
 
-| Hook | Event | Behavior |
-|---|---|---|
-| `polaris-session-start.sh` | `SessionStart` | If `.claude/context/ROUTER.md` exists, nudge the agent to `/recall` and skim it before editing. |
-| `polaris-edited-file-accumulator.sh` | `PostToolUse` (Edit\|Write\|MultiEdit) | Record edited file paths to a per-session temp file. Observe only. |
-| `polaris-stop-summary.sh` | `Stop` | Print a deduped summary of files touched that turn, then reset. Prints nothing on turns with no edits. |
+| Hook | Event | Behavior | Audience |
+|---|---|---|---|
+| `polaris-session-start.sh` | `SessionStart` | If `.claude/context/ROUTER.md` exists, nudge toward `/recall` and skimming it before editing. | **Agent** — injected into context, not a visible chat message (this is how SessionStart stdout works). |
+| `polaris-edited-file-accumulator.sh` | `PostToolUse` (Edit\|Write\|MultiEdit) | Record edited file paths to a per-session temp file, then reset at Stop. Observe only. | None — silent. |
+| `polaris-stop-summary.sh` | `Stop` | Deduped summary of files touched that turn. Silent on turns with no edits. | **You** — emitted as JSON `systemMessage`, the one hook output Claude Code shows to the user. |
+
+> **Output visibility matters.** For most events, hook stdout only reaches the
+> debug log. `SessionStart` stdout is added to the agent's context (so the agent
+> acts on the nudge, but you don't see a message). To surface text to the *user*,
+> a hook must print JSON with a `systemMessage` field — which is what the Stop
+> summary does. Verify any hook fired with `/hooks` or `claude --debug`.
 
 Future profiles (`standard`, `strict`) are intentionally **not** shipped yet —
 batch format/typecheck, config protection, secret scanning, and blocking
@@ -70,6 +76,8 @@ behavior need dogfooding before they become defaults.
 
 - **Never fail the session.** Every script exits `0` even on bad input, and
   degrades to a no-op when `jq` or the payload is missing.
+- **User-visible output uses `systemMessage`.** Plain stdout would vanish into
+  the debug log; the Stop summary emits JSON so you actually see it.
 - **POSIX-friendly.** No bash-4 features (e.g. `mapfile`) — these run under
   macOS's stock bash 3.2.
 - **Stack-agnostic.** The minimal profile does not run formatters or type
