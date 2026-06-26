@@ -98,6 +98,7 @@ Some skills are adapted from popular open-source skill repos:
 | Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/execution/tailwind-v4-design-system.md` |
 | React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/execution/react-best-practices.md` |
 | Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/writing/write-as-human.md` |
+| Hook runtime (concept) | [affaan-m/ECC](https://github.com/affaan-m/ECC) | `hooks/` (reimplemented in shell) |
 
 ## Profiles
 
@@ -201,6 +202,20 @@ Polaris maintains a navigable context scaffold in `.claude/context/` so agents l
 4. Run `/reflect` at session end — it now bridges session learnings into the scaffold
 
 The scaffold grows over time without growing token cost — agents read ROUTER.md (under 50 lines) and pull only the files relevant to their current task.
+
+## Hooks (Optional Guardrails)
+
+Everything else in Polaris is markdown that Claude *chooses* to follow. Hooks run deterministically at Claude Code's lifecycle events, so they reinforce the workflow even when a session drifts. They are **opt-in and project-scoped** — never installed by `polaris global` or `polaris project`.
+
+```bash
+polaris hooks install        # minimal profile into the current project
+polaris hooks status         # profile, wiring, and script freshness
+polaris hooks uninstall      # remove (keeps your own hooks)
+```
+
+The `minimal` profile is non-blocking lifecycle safety: a SessionStart nudge toward `.claude/context/`, a per-session edited-file accumulator, and a Stop-time summary of files touched. Requires `jq`. See [hooks/README.md](hooks/README.md) for details and the design bar every hook must clear.
+
+> Heavier profiles (`standard`, `strict`) — batch format/typecheck, config protection, secret scanning, blocking behavior — are intentionally not shipped yet; they need dogfooding before becoming defaults.
 
 ## Workflow
 

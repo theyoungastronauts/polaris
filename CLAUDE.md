@@ -21,6 +21,9 @@ templates/       Fillable templates (integration summaries)
 profiles/        .txt manifests + .claude.md snippets per stack
   _multi-stack.txt  Auto-added items for multi-stack installs
   *.claude.md       CLAUDE.md context snippets (one per stack, uses {directory} placeholder)
+hooks/           Optional, opt-in session guardrails (the one place we ship code)
+  scripts/       POSIX-friendly shell hooks run by Claude Code at lifecycle events
+  *.json         Profile fragments merged into a project's .claude/settings.json
 install.sh       Copies files into ~/.claude/ (global) or .claude/ (project)
 context-pull.sh  Extracts Django backend context for frontend sessions
 ```
@@ -65,6 +68,9 @@ context-pull.sh  Extracts Django backend context for frontend sessions
 
 ## What NOT to do
 
-- Don't add runtime code — this repo is purely markdown instructions + shell scripts
+- Don't add runtime code outside `hooks/` — skills, agents, and workflows stay
+  pure markdown. The one sanctioned exception is `hooks/` (opt-in shell guardrails
+  Claude Code executes at lifecycle events); keep it POSIX-friendly, non-blocking,
+  and never auto-installed by `global`/`project`
 - Don't create skills that depend on other skills being loaded (self-contained)
 - Don't put project-specific context in skills — keep them generic/reusable
