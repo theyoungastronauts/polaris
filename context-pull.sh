@@ -46,6 +46,10 @@ if [[ -z "$BACKEND_PATH" ]]; then
     usage
 fi
 
+# Strip a trailing slash so the "${file#$BACKEND_PATH/}" prefix strips below
+# match (otherwise a path like "../api/" leaves a leading slash in rel_path)
+BACKEND_PATH="${BACKEND_PATH%/}"
+
 if [[ ! -d "$BACKEND_PATH" ]]; then
     echo "Error: $BACKEND_PATH is not a directory"
     exit 1
@@ -80,14 +84,14 @@ mkdir -p "$OUTPUT_DIR"
         while IFS= read -r -d '' file; do
             # Filter by app if specified
             if [[ -n "$APPS" ]]; then
-                local_path="${file#$BACKEND_PATH/}"
+                local_path="${file#"$BACKEND_PATH"/}"
                 app_name="$(echo "$local_path" | cut -d'/' -f1)"
                 if ! echo ",$APPS," | grep -q ",$app_name,"; then
                     continue
                 fi
             fi
 
-            rel_path="${file#$BACKEND_PATH/}"
+            rel_path="${file#"$BACKEND_PATH"/}"
             echo "## \`$rel_path\`"
             echo ""
             echo '```python'

@@ -254,7 +254,7 @@ For full-stack work with decoupled repos:
 
 ## How It Works
 
-Running `./install.sh init` saves the repo location, adds a `polaris` shell alias, and merges required settings into `~/.claude/settings.json` — tool permissions, deny rules, and LSP plugins. Existing settings are preserved; only missing entries are added. Requires `jq` (`brew install jq`).
+Running `./install.sh init` saves the repo location, adds a `polaris` shell alias, and merges required settings into `~/.claude/settings.json` — a tool-permission allowlist (including a blanket `Bash` allow for autonomous workflows), LSP plugins, and the agent-teams `env` flag. Your existing settings are preserved and init prints a summary of exactly what it asserted. Re-running `init` is safe and idempotent: it re-asserts Polaris's permission allowlist, `enabledPlugins`, and `env` entries (adding any that are missing) without removing anything you added. Requires `jq` (`brew install jq`).
 
 Both `polaris global` and `polaris project` automatically generate a `CLAUDE.md` with references to all installed skills, agents, and commands. This is how Claude Code discovers your skills. By default it amends the existing CLAUDE.md (preserving your content); use `--fresh` with `polaris global` to start with a developer-defaults template, or `--no-claude-md` to skip generation entirely.
 

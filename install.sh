@@ -118,10 +118,6 @@ REQUIRED_SETTINGS='
       "mcp__axon__axon_detect_changes",
       "mcp__axon__axon_list_repos",
       "mcp__axon__axon_cypher"
-    ],
-    "deny": [
-      "Bash(rm -rf /)",
-      "Bash(sudo rm -rf:*)"
     ]
   },
   "enabledPlugins": {
@@ -148,13 +144,11 @@ _merge_settings() {
         # Merge: deduplicate arrays, merge objects
         local merged
         merged=$(jq -s '
-            def merge_arrays: [.[0], .[1]] | add | unique;
             .[0] as $existing | .[1] as $required |
             $existing *
             {
                 "permissions": {
-                    "allow": ([$existing.permissions.allow // [], $required.permissions.allow] | add | unique),
-                    "deny": ([$existing.permissions.deny // [], $required.permissions.deny] | add | unique)
+                    "allow": ([$existing.permissions.allow // [], $required.permissions.allow] | add | unique)
                 },
                 "enabledPlugins": (($existing.enabledPlugins // {}) * $required.enabledPlugins),
                 "env": (($existing.env // {}) * $required.env)
@@ -167,6 +161,15 @@ _merge_settings() {
         echo "$REQUIRED_SETTINGS" | jq '.' > "$settings_file"
         ok "Created $settings_file with default settings"
     fi
+
+    # Summarize exactly what Polaris asserted (existing keys are preserved;
+    # anything not listed here is left untouched)
+    info "Polaris asserted into settings.json:"
+    jq -r '
+        "  permissions.allow (merged, deduped): " + ((.permissions.allow // []) | join(", ")),
+        "  enabledPlugins: " + ((.enabledPlugins // {}) | keys | join(", ")),
+        "  env: " + ((.env // {}) | to_entries | map(.key + "=" + (.value | tostring)) | join(", "))
+    ' <<< "$REQUIRED_SETTINGS"
 }
 
 # ---- Shell alias ----
@@ -199,10 +202,13 @@ _install_alias() {
         if [[ "$existing" == "$ALIAS_LINE" ]]; then
             ok "Shell alias already set in $profile"
         else
-            # Replace the old alias line (temp file keeps this portable across BSD/GNU sed)
-            local tmp
+            # Replace the old alias line (temp file keeps this portable across BSD/GNU sed).
+            # Escape sed-special chars in the replacement so a repo path containing
+            # &, \, or the | delimiter can't corrupt the substitution.
+            local tmp esc
             tmp="$(mktemp)"
-            sed "s|alias polaris=.*|${ALIAS_LINE}|" "$profile" > "$tmp"
+            esc="$(printf '%s' "$ALIAS_LINE" | sed 's/[\\&|]/\\&/g')"
+            sed "s|alias polaris=.*|${esc}|" "$profile" > "$tmp"
             mv "$tmp" "$profile"
             ok "Updated shell alias in $profile"
             info "Run: source $profile (or open a new terminal)"
@@ -259,6 +265,13 @@ _copy_file() {
     local dest="$2"
     local dry_run="${3:-false}"
     local force="${4:-false}"
+
+    # Guard against a profile that references a file no longer in the repo —
+    # fail with a clear message instead of a raw cp abort mid-install.
+    if [[ ! -f "$SKILLS_REPO/$src" ]]; then
+        err "profile references a missing file: $src"
+        return 1
+    fi
 
     local dest_parent
     dest_parent="$(dirname "$dest")"
@@ -331,12 +344,61 @@ _write_manifest() {
     local profile_lines="$2"
     local dry_run="${3:-false}"
 
+    local manifest="$claude_dir/$MANIFEST_FILE"
+
+    # Compute the new installed-file list (profile lines → paths, plus any
+    # context scaffold files present on disk)
+    local new_paths=()
+    local path
+    while IFS= read -r path; do
+        [[ -z "$path" ]] && continue
+        new_paths+=("$path")
+    done < <(echo "$profile_lines" | _profile_lines_to_paths)
+
+    # Track context scaffold files whenever they exist on disk — whether this
+    # run freshly copied them or they survive from a prior install. Gating this
+    # on "did this run copy templates" would drop an untouched scaffold from
+    # new_paths on a reinstall (context/ already exists, so nothing is
+    # re-copied), and the drift loop below would then wrongly delete it as
+    # "no longer tracked".
+    local ctx_file
+    for ctx_file in context/ROUTER.md context/decisions.md context/conventions.md context/patterns/README.md; do
+        [[ -f "$claude_dir/$ctx_file" ]] && new_paths+=("$ctx_file")
+    done
+
+    # Manifest drift: remove files the previous manifest tracked that are no
+    # longer part of this install (a profile entry dropped or renamed). Without
+    # this they linger on disk and, being absent from the new manifest, survive
+    # a later uninstall too. Never delete populated context files.
+    if [[ -f "$manifest" ]]; then
+        local old_path
+        while IFS= read -r old_path; do
+            [[ -z "$old_path" ]] && continue
+            local still_present=false p
+            for p in "${new_paths[@]+"${new_paths[@]}"}"; do
+                [[ "$p" == "$old_path" ]] && { still_present=true; break; }
+            done
+            [[ "$still_present" == "true" ]] && continue
+            local target="$claude_dir/$old_path"
+            [[ -f "$target" ]] || continue
+            if [[ "$old_path" == context/* ]] && ! _is_pristine_context_file "$claude_dir" "$old_path"; then
+                info "  kept (project content): $old_path"
+                continue
+            fi
+            if [[ "$dry_run" == "true" ]]; then
+                echo "  would remove (no longer tracked): $old_path"
+            else
+                rm -f "$target"
+                ok "  removed (no longer tracked): $old_path"
+            fi
+        done < <(_read_manifest_files "$claude_dir")
+    fi
+
     if [[ "$dry_run" == "true" ]]; then
         echo "  would write: $claude_dir/$MANIFEST_FILE"
         return 0
     fi
 
-    local manifest="$claude_dir/$MANIFEST_FILE"
     local timestamp
     timestamp="$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
 
@@ -354,33 +416,17 @@ _write_manifest() {
     done
     stacks_json+="}"
 
-    # Build files array
+    # Build files array from the computed new-path list
     local files_json="["
     first=true
-    while IFS= read -r path; do
-        [[ -z "$path" ]] && continue
+    for path in "${new_paths[@]+"${new_paths[@]}"}"; do
         if [[ "$first" == "true" ]]; then
             first=false
         else
             files_json+=", "
         fi
         files_json+="\"$path\""
-    done < <(echo "$profile_lines" | _profile_lines_to_paths)
-
-    # Track context scaffold files only when this run created them —
-    # a pre-existing context/ belongs to the user, not Polaris
-    if [[ "${CONTEXT_TEMPLATES_COPIED:-false}" == "true" ]]; then
-        for ctx_file in context/ROUTER.md context/decisions.md context/conventions.md context/patterns/README.md; do
-            if [[ -f "$claude_dir/$ctx_file" ]]; then
-                if [[ "$first" == "true" ]]; then
-                    first=false
-                else
-                    files_json+=", "
-                fi
-                files_json+="\"$ctx_file\""
-            fi
-        done
-    fi
+    done
     files_json+="]"
 
     cat > "$manifest" <<EOF
@@ -421,14 +467,47 @@ read_profile() {
     local profile_file="$SKILLS_REPO/profiles/${profile_name}.txt"
 
     if [[ ! -f "$profile_file" ]]; then
+        # Diagnostics to stderr and `return` (not `exit`): read_profile runs
+        # inside command/process substitutions, where stdout is captured as
+        # profile lines and `exit` only kills the subshell.
         err "Profile not found: $profile_name"
-        echo "Available profiles:"
-        cmd_list_profiles
-        exit 1
+        echo "Available profiles:" >&2
+        cmd_list_profiles >&2
+        return 1
     fi
 
     # Read non-empty, non-comment lines
     grep -v '^\s*#' "$profile_file" | grep -v '^\s*$'
+}
+
+# List selectable profile base names (excludes _-prefixed helpers like _multi-stack)
+_available_profile_names() {
+    local f b
+    for f in "$SKILLS_REPO"/profiles/*.txt; do
+        [[ -f "$f" ]] || continue
+        b="$(basename "$f" .txt)"
+        [[ "$b" == _* ]] && continue
+        echo "$b"
+    done
+}
+
+# Fail loudly if any requested --stack/--profile name has no profiles/<name>.txt.
+# Runs before any install work so a bad name can't fall through to read_profile
+# inside a subshell (where its diagnostics would be captured and installed as files).
+_validate_requested_profiles() {
+    local bad=() name
+    for name in "$@"; do
+        [[ -z "$name" ]] && continue
+        [[ -f "$SKILLS_REPO/profiles/${name}.txt" ]] || bad+=("$name")
+    done
+    if [[ ${#bad[@]} -gt 0 ]]; then
+        local available
+        available="$(_available_profile_names | tr '\n' ' ')"
+        for name in "${bad[@]}"; do
+            err "Unknown stack '$name' (available: ${available% })"
+        done
+        exit 1
+    fi
 }
 
 # ---- Clean / uninstall helpers ----
@@ -524,15 +603,10 @@ _clean_project() {
                 warn "Kept context/ files with project content — delete manually if unwanted"
             fi
         fi
-        # Remove all commands (can't distinguish Polaris vs user without manifest)
+        # Commands can't be told apart from user-authored ones without a
+        # manifest — never blow the whole directory away. Warn and keep it.
         if [[ -d "$claude_dir/commands" ]]; then
-            if [[ "$dry_run" == "true" ]]; then
-                echo "  would remove: commands/"
-            else
-                rm -rf "$claude_dir/commands"
-                echo "  removed: commands/"
-            fi
-            (( removed++ )) || true
+            warn "Kept commands/ — can't distinguish Polaris commands from yours without a manifest; remove manually if unwanted"
         fi
     fi
 
@@ -569,14 +643,14 @@ _clean_project() {
                 ' "$claude_md")
 
                 # Trim trailing blank lines
-                preserved=$(echo "$preserved" | awk '
+                preserved=$(printf '%s\n' "$preserved" | awk '
                     /[^ \t]/ { p=NR }
                     { lines[NR]=$0 }
                     END { for (i=1; i<=p; i++) print lines[i] }
                 ')
 
                 if [[ -n "$preserved" ]]; then
-                    echo "$preserved" > "$claude_md"
+                    printf '%s\n' "$preserved" > "$claude_md"
                     ok "Stripped Polaris section from CLAUDE.md (user content preserved)"
                 else
                     rm "$claude_md"
@@ -1081,7 +1155,7 @@ _apply_claude_md_amend() {
         ' "$claude_md_file")
 
         # Trim trailing blank lines from preserved content
-        preserved=$(echo "$preserved" | awk '
+        preserved=$(printf '%s\n' "$preserved" | awk '
             /[^ \t]/ { p=NR }
             { lines[NR]=$0 }
             END { for (i=1; i<=p; i++) print lines[i] }
@@ -1090,7 +1164,7 @@ _apply_claude_md_amend() {
         # Write preserved content + new block
         if [[ -n "$preserved" ]]; then
             {
-                echo "$preserved"
+                printf '%s\n' "$preserved"
                 echo ""
                 echo "$polaris_block"
             } > "$claude_md_file"
@@ -1256,7 +1330,6 @@ _install_context_templates() {
 
     if [[ "$dry_run" == "true" ]]; then
         echo "  would copy: templates/context/ → $context_dir/"
-        CONTEXT_TEMPLATES_COPIED="true"
         return 0
     fi
 
@@ -1265,7 +1338,6 @@ _install_context_templates() {
     cp "$template_dir/decisions.md" "$context_dir/decisions.md"
     cp "$template_dir/conventions.md" "$context_dir/conventions.md"
     cp "$template_dir/patterns/README.md" "$context_dir/patterns/README.md"
-    CONTEXT_TEMPLATES_COPIED="true"
     ok "  copied context scaffold templates to context/"
     info "  Run /intel to populate with project-specific content"
 }
@@ -1388,6 +1460,9 @@ cmd_new() {
         exit 1
     fi
 
+    # Validate any requested stack names before creating anything
+    _validate_requested_profiles "${STACK_NAMES[@]+"${STACK_NAMES[@]}"}"
+
     # Resolve to absolute path
     if [[ "$project_path" != /* ]]; then
         project_path="$(pwd)/$project_path"
@@ -1479,7 +1554,7 @@ cmd_project() {
     local fresh="$5"
     local no_claude_md="$6"
     local clean="$7"
-    shift 7 2>/dev/null || shift 6
+    shift 7
     local extras=("$@")
 
     # Validate: can't use both --profile and --stack
@@ -1488,6 +1563,9 @@ cmd_project() {
         err "Use --stack for composable installs or --profile for legacy single-profile mode."
         exit 1
     fi
+
+    # Validate every requested stack/profile name before any install work
+    _validate_requested_profiles "$profile" "${STACK_NAMES[@]+"${STACK_NAMES[@]}"}"
 
     local project_dir
     project_dir="$(_resolve_project_dir "$target")"
@@ -1992,7 +2070,6 @@ FRESH="false"
 CLEAN="false"
 NO_CLAUDE_MD="false"
 STANDALONE="false"
-CONTEXT_TEMPLATES_COPIED="false"
 PROFILE=""
 TARGET=""
 NEW_PATH=""
