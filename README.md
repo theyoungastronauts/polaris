@@ -136,6 +136,8 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/write-as-human` | Strip AI writing patterns from prose | global |
 | `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
 | `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn, astro |
+| `/verify-nextjs-shadcn` | ShadCN-specific verification checklist (components.json, `cn()`, next-themes) | nextjs-shadcn |
+| `/verify-nextjs-mui` | MUI-specific verification checklist (sx, Emotion SSR, Grid `size`) | nextjs-mui |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |

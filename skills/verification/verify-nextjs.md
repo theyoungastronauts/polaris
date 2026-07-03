@@ -26,11 +26,14 @@ Match the project's architecture mode (see CLAUDE.md / nextjs-patterns): SSR-cen
 - [ ] Loading states handled (SSR: loading.tsx or Suspense; frontend-centric: loading flags in state, reset in `finally`)
 - [ ] Error states handled (SSR: error.tsx or error boundaries; frontend-centric: error state + user-visible message)
 - [ ] Caching strategy is intentional (not accidental)
+- [ ] API endpoints use trailing slashes (Django REST Framework convention)
+- [ ] API calls live in a single `lib/api.ts` — a generic `apiFetch<T>` base plus namespaced exports (`authApi`, `itemsApi`), not scattered `fetch` calls
 
 ### 4. Types
 - [ ] API response types match the integration summary
 - [ ] No `any` escape hatches without comments explaining why
 - [ ] Shared types are in `types/` not duplicated across files
+- [ ] Backend dates are typed as `string` (ISO 8601) and parsed with `dayjs` — not read as `Date` straight off the wire
 - [ ] `tsc --noEmit` passes cleanly
 
 ### 5. Performance
@@ -38,6 +41,8 @@ Match the project's architecture mode (see CLAUDE.md / nextjs-patterns): SSR-cen
 - [ ] No unnecessary re-renders (check effect dependencies)
 - [ ] Large lists are virtualized if >100 items
 - [ ] Bundle impact is reasonable (no giant libraries for small tasks)
+
+> For a deeper performance pass, run the `/react` skill (`react-best-practices`) — its 57 rules across 8 categories are prioritized by impact.
 
 ### 6. Accessibility
 - [ ] Interactive elements are keyboard accessible
@@ -62,6 +67,13 @@ Match the project's architecture mode (see CLAUDE.md / nextjs-patterns): SSR-cen
 - [ ] `docker-compose.yml` exists with volume mounts and `WATCHPACK_POLLING`
 - [ ] `Makefile` exists and wraps all commands via `docker compose exec`
 - [ ] No `npm run` / `npx` commands used directly on host
+
+### 10. Styling — Tailwind v4 (Tailwind stacks only: shadcn / plain Next.js — skip for MUI)
+- [ ] No `tailwind.config.js/ts` — configuration lives in an `@theme` block in CSS, with `@import "tailwindcss"` (not `@tailwind base/components/utilities`)
+- [ ] Colors use semantic tokens in OKLCH (`bg-primary`, not `bg-blue-500` or hardcoded hex); new tokens go in `@theme` rather than arbitrary values
+- [ ] Component variants use CVA (`class-variance-authority`), merged through `cn()`
+- [ ] `size-*` shorthand (`size-10`) over `h-10 w-10`; no `forwardRef` (React 19 passes `ref` as a prop)
+- [ ] Dark mode via `@custom-variant dark` + the `.dark` class, not a config `darkMode` flag
 
 ## Output
 Produce a `verification-report.md` (same format as verify-django).
