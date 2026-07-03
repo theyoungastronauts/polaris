@@ -101,16 +101,21 @@ For each wave:
 
 1. **Spawn** one executor per task (name: `exec-N` where N is the task ID). Use the task's model override if specified.
    > Implement task N: [description]. Do not commit. Report back when done with a summary of changes made.
-2. **Wait** for all executors in the wave to complete.
+2. **Wait** for all executors in the wave to complete. If any executor reports it is **blocked** (rather than done), pause and escalate to the user — do NOT proceed to lint/test on a partial wave.
 3. **Lint/test** — run test and lint commands. On failure:
    - Analyze and fix simple issues (lint, imports, formatting) yourself
    - If still failing, send the relevant executor a message describing what to fix
    - Re-run after each fix attempt
    - **Stop after 3 failed attempts** with full output
-4. **Teardown** wave agents.
-5. **Advance** to next wave.
+4. **Commit** — once lint/test pass, stage and commit the wave's work with a clear message following commit-conventions. Commit one wave at a time so progress is durable ("commit frequently"). If the commit fails (hook rejection, nothing staged, git error), do NOT advance — surface the git error and stop.
+5. **Teardown** wave agents.
+6. **Advance** to next wave.
 
 ## 7b. Phased Mode Execution
+
+<!-- Maintainer note: this phased execute → lint/test → verify → commit loop mirrors skills/execution/autopilot.md (§5 Phase Loop). Change both when you touch loop behavior. -->
+
+Before executing each phase, run `git status`. If the working tree is dirty, stop and ask the user to stash, reset, or commit before continuing — never execute a phase on top of an unclean tree. Durable state lives in per-phase commits, not the in-session task list (see Resume).
 
 ### Sequential phases
 
@@ -118,7 +123,7 @@ For each phase:
 
 1. **Execute** — send the phase to executor:
    > Execute Phase N: [Name]. Objective: [objective]. Implement all tasks. Do not commit.
-   Wait for completion report.
+   Wait for completion report. If the executor reports **blocked** or a stale/wrong plan (rather than "done, with notes"), pause and escalate to the user. Do NOT proceed to lint/test — the phase isn't implemented.
 
 2. **Lint/test** — run commands yourself. On failure: same 3-strike rule as direct mode.
 
@@ -127,7 +132,7 @@ For each phase:
    Wait for verdict.
 
 4. **Handle verdict:**
-   - **PASS or PASS WITH WARNINGS**: stage and commit all changes as `feat(scope): implement phase N — [name]`. Include verification report. Log warnings. Mark tasks completed. Next phase.
+   - **PASS or PASS WITH WARNINGS**: stage and commit all changes as `feat(scope): implement phase N — [name]`. Include verification report. If the commit fails (hook rejection, nothing staged, git error), do NOT mark the phase complete — surface the git error and stop. Otherwise log warnings, mark tasks completed, and move to the next phase.
    - **FAIL**: stop immediately. Report which phase failed and what the reviewer found. Do NOT attempt fixes — they need human judgment. Tell the user to fix issues and run `/orchestrator N` to resume.
 
 ### Parallel phase groups
@@ -139,7 +144,7 @@ When phases in a plan are marked as a parallel group (no cross-dependencies):
 3. Wait for all completions.
 4. Run lint/test for the combined changes.
 5. Verify each phase sequentially (one reviewer avoids merge conflicts in reports).
-6. All PASS → commit all, advance past sync point. Any FAIL → stop and report.
+6. All PASS → commit each phase separately (one commit per phase, per sub-project — never a single commit spanning phases or sub-projects), then advance past the sync point. Any FAIL → stop and report.
 
 ## 8. Completion
 
@@ -156,13 +161,18 @@ After all tasks/phases pass:
 
 - **Teammate crash or timeout**: stop and report. Do not retry.
 - **Test failures after 3 attempts**: stop with full failing output.
+- **Commit failure**: do not mark the phase/wave complete. Surface the git error and stop.
 - **FAIL verdict**: stop with issues and resume instructions.
 - **File conflicts in parallel wave**: serialize the conflicting tasks automatically.
 - **Unexpected errors**: stop and report with full context. Never silently continue.
 
 ## Resume
 
+Durable state lives in per-phase (or per-wave) commits, not the in-session task list — if the session dies, the committed work survives but the TaskCreate progress does not. Treat the last commit as the source of truth for where you are.
+
+Before resuming, run `git status`. If the tree is dirty, stop and ask the user to stash, reset, or commit before continuing.
+
 Invoke with `/orchestrator N` to resume from a specific point:
 
-- **Phased mode**: N = phase number. Earlier phases are skipped.
-- **Direct mode**: N = task ID. Tasks with ID < N are marked completed. Waves are recomputed from remaining tasks.
+- **Phased mode**: N = phase number. Skip phases already landed as commits; recreate the task list for the phases that remain.
+- **Direct mode**: N = task ID. Skip tasks already landed as commits; recompute waves from the tasks that remain.

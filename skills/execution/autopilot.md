@@ -38,6 +38,12 @@ Each task is blocked by its predecessor. This provides progress visibility and s
 
 ## 5. Phase Loop
 
+<!-- Maintainer note: this execute → lint/test → verify → commit loop is duplicated in skills/execution/orchestrator.md (§7b Phased Mode). Change both when you touch loop behavior. -->
+
+Before executing each phase, run `git status`. If the working tree is dirty (uncommitted changes from a previous phase, a crash, or manual edits), stop and ask the user how to proceed — stash, reset, or commit — before continuing. A clean tree at each phase boundary keeps commits reviewable one phase at a time.
+
+Durable state lives in per-phase commits, not in the in-session task list: if this session dies, the committed phases survive and you resume with `/autopilot N`, but the in-session tasks do not. Treat the last commit as the source of truth for where you are.
+
 For each phase (starting from the start phase):
 
 ### 5a. Execute
@@ -45,6 +51,8 @@ Assign the execute task to "executor" and send a message:
 > Execute Phase N: [Name]. Objective: [objective from plan]. Implement all tasks for this phase. Do not commit.
 
 Wait for the executor's completion report.
+
+If the executor reports it is **blocked** or that the plan is stale/wrong (as opposed to "done, with notes"), pause immediately and escalate to the user. Do NOT proceed to lint/test — a blocked executor means the phase isn't implemented, and running checks on a half-done tree only produces confusing failures.
 
 ### 5b. Run Tests and Lint
 Run the test and lint commands yourself. If any fail:
@@ -64,6 +72,7 @@ Wait for the reviewer's verdict.
 **PASS or PASS WITH WARNINGS:**
 - Stage and commit all changes: `feat(scope): implement phase N — [name]`
 - Include the verification report in the commit
+- If the commit fails (hook rejection, nothing staged, git error): do NOT mark the phase complete. Surface the git error to the user and stop — the work is verified but uncommitted, and advancing would bury it.
 - Log any warnings for the final summary
 - Mark tasks completed, move to next phase
 
@@ -83,4 +92,5 @@ After all phases pass:
 
 - Teammate crash or timeout: stop and report. Do not retry.
 - Test failures after 3 fix attempts: stop and report with failing output.
+- Commit failure: do not mark the phase complete. Surface the git error and stop.
 - Unexpected errors: stop and report with full context. Never silently continue.

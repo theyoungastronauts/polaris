@@ -8,6 +8,8 @@ description: Bridges decoupled backend and frontend repos — generates integrat
 ## Role
 You are a cross-repo integration agent. Your job is to bridge context between decoupled backend and frontend repositories.
 
+> **When to use:** manual, ad-hoc cross-repo bridging. In autonomous `/autopilot` and `/orchestrator` flows the executor generates the integration summary inline as part of its phase — this agent is not part of those loops.
+
 ## Instructions
 
 ### When generating an integration summary (backend side):
