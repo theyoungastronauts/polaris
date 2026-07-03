@@ -328,7 +328,7 @@ You: /orchestrator
 You: /orchestrator 3    # resume from task/phase 3
 ```
 
-See `workflows/full-feature.md` for where these fit in the overall workflow.
+See the `/full-feature` workflow for where these fit in the overall workflow.
 
 ---
 
@@ -452,7 +452,7 @@ git checkout -b feature/notifications
 
 ### Multiple Independent Features in Parallel
 
-Use git worktrees to work on unrelated features simultaneously without stashing or context switching. See `skills/git/worktrees.md` for the full setup.
+Use git worktrees to work on unrelated features simultaneously without stashing or context switching. See the `/worktrees` skill for the full setup.
 
 ```bash
 cd ~/prj/my-app/api
@@ -483,7 +483,7 @@ git worktree add ../api-billing -b feature/billing
 | — | Capture decisions/patterns | Any repo (session end) | `/remember` command |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
 | — | Ongoing: single feature | Any repo | Branch → execute → review → PR |
-| — | Ongoing: parallel features | Any repo | Worktrees (see `skills/git/worktrees.md`) |
+| — | Ongoing: parallel features | Any repo | Worktrees (see the `/worktrees` skill) |
 
 ---
 

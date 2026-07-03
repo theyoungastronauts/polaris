@@ -57,7 +57,7 @@ Once you have a working application and are building new features on top of it:
 
 **Single feature:** check out a branch, execute, review, PR, merge. Simple.
 
-**Multiple independent features in parallel:** use git worktrees (see `skills/git/worktrees.md`). Each feature gets its own worktree so you can switch between them without stashing or losing context. This is where worktrees earn their keep.
+**Multiple independent features in parallel:** use git worktrees (see the `/worktrees` skill). Each feature gets its own worktree so you can switch between them without stashing or losing context. This is where worktrees earn their keep.
 
 ## Tips
 - Don't skip the planning step — it saves time overall

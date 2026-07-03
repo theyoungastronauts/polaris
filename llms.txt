@@ -12,7 +12,7 @@ Files are **copied** (not symlinked) so projects work independently. A checksum 
 ## Repository Structure
 
 ```
-install.sh              Installer (init, global, project, status, new)
+install.sh              Installer (init, global, new, project, uninstall, hooks, status, validate, list-profiles, list-skills)
 context-pull.sh         Extracts Django backend context for frontend sessions
 skills/
   planning/             Brainstorming, plan-and-scope, phase-breakdown, scaffold
@@ -21,7 +21,7 @@ skills/
                         Also: execute-phase, autopilot, orchestrator, architecture-intel,
                         cross-repo-context, visual-feedback, react-best-practices,
                         tailwind-v4-design-system, work-discipline, axon-code-intel
-  verification/         verify-phase + per-stack checklists (Django, Next.js, Next.js full-stack, Flutter, Astro)
+  verification/         verify-phase + per-stack checklists (Django, Next.js, Next.js MUI, Next.js ShadCN, Next.js full-stack, Flutter, Astro)
   writing/              Clear writing guidelines, write-as-human
   memory/               Project context lifecycle (/remember, /recall)
   meta/                 Writing new skills, session reflection
@@ -138,6 +138,9 @@ Installed to `.claude/commands/` — only loaded when invoked.
 | `/react` | React best practices reference |
 | `/tailwind` | Tailwind v4 + DaisyUI patterns |
 | `/visual-feedback` | Browser-annotated UI fix workflow |
+| `/worktrees` | Git worktree setup for parallel features |
+| `/writing-skills` | Guide for authoring new skills |
+| `/full-feature` | End-to-end feature workflow (plan → execute → verify → merge) |
 
 ## Core Workflow
 
@@ -206,5 +209,5 @@ Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-p
 - **Add an agent:** Create `.md` in `agents/`
 - **Project-specific extras:** `polaris project --extra skills/misc/my-skill.md`
 
-→ Skill authoring guide: `skills/meta/writing-skills.md`
+→ Skill authoring guide: the `/writing-skills` skill (`skills/meta/writing-skills.md`)
 → Repo conventions: `CLAUDE.md`

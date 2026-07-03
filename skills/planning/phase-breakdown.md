@@ -31,7 +31,7 @@ One sentence — what does "done" look like?
 
 ### Branch
 feature/[plan-name]-phase-N
-(See `skills/git/worktrees.md` for worktree setup)
+(See the `/worktrees` skill for worktree setup)
 
 ### Verification Checklist
 - [ ] All tasks completed

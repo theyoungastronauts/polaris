@@ -865,6 +865,7 @@ _merge_profiles() {
     # Args: stack names
     local stacks=("$@")
     local seen_keys=()
+    local seen_lines=()
     local merged_lines=()
 
     for stack in "${stacks[@]}"; do
@@ -875,15 +876,25 @@ _merge_profiles() {
             fi
             # Check if already seen
             local found=false
-            local k
-            for k in "${seen_keys[@]+"${seen_keys[@]}"}"; do
-                if [[ "$k" == "$key" ]]; then
+            local i
+            for (( i=0; i<${#seen_keys[@]}; i++ )); do
+                if [[ "${seen_keys[$i]}" == "$key" ]]; then
                     found=true
+                    # Two selected stacks mapping the same command name to
+                    # different files would silently drop one — fail loudly.
+                    if [[ "$line" == cmd:* && "${seen_lines[$i]}" != "$line" ]]; then
+                        err "Command name conflict: two selected stacks map /${key#cmd:} to different files:"
+                        err "    ${seen_lines[$i]}"
+                        err "    ${line}"
+                        err "Pick a single stack for that command, or rename it in a profile."
+                        exit 1
+                    fi
                     break
                 fi
             done
             if [[ "$found" == "false" ]]; then
                 seen_keys+=("$key")
+                seen_lines+=("$line")
                 merged_lines+=("$line")
             fi
         done < <(read_profile "$stack")
@@ -893,16 +904,27 @@ _merge_profiles() {
     if [[ ${#stacks[@]} -gt 1 ]] && [[ -f "$SKILLS_REPO/profiles/_multi-stack.txt" ]]; then
         while IFS= read -r line; do
             local key="$line"
+            if [[ "$line" == cmd:* ]]; then
+                key="${line%%=*}"
+            fi
             local found=false
-            local k
-            for k in "${seen_keys[@]+"${seen_keys[@]}"}"; do
-                if [[ "$k" == "$key" ]]; then
+            local i
+            for (( i=0; i<${#seen_keys[@]}; i++ )); do
+                if [[ "${seen_keys[$i]}" == "$key" ]]; then
                     found=true
+                    if [[ "$line" == cmd:* && "${seen_lines[$i]}" != "$line" ]]; then
+                        err "Command name conflict: /${key#cmd:} maps to two different files:"
+                        err "    ${seen_lines[$i]}"
+                        err "    ${line}"
+                        err "Pick a single stack for that command, or rename it in a profile."
+                        exit 1
+                    fi
                     break
                 fi
             done
             if [[ "$found" == "false" ]]; then
                 seen_keys+=("$key")
+                seen_lines+=("$line")
                 merged_lines+=("$line")
             fi
         done < <(read_profile "_multi-stack")

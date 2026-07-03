@@ -32,12 +32,15 @@ cmd:remember=skills/memory/remember.md
 cmd:recall=skills/memory/recall.md
 
 # Meta
-skills/meta/writing-skills.md
+cmd:writing-skills=skills/meta/writing-skills.md
 cmd:reflect=skills/meta/reflect.md
 
 # Git
 skills/git/commit-conventions.md
-skills/git/worktrees.md
+cmd:worktrees=skills/git/worktrees.md
+
+# Workflows (on-demand)
+cmd:full-feature=workflows/full-feature.md
 
 # Agents
 agents/planner.md

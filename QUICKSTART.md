@@ -90,4 +90,4 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 
 **Single feature:** branch → `/execute` → `/verify` → PR → merge
 
-**Parallel features:** use git worktrees (`skills/git/worktrees.md`)
+**Parallel features:** use git worktrees (the `/worktrees` skill)

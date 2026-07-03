@@ -28,6 +28,15 @@ install.sh       Copies files into ~/.claude/ (global) or .claude/ (project)
 context-pull.sh  Extracts Django backend context for frontend sessions
 ```
 
+## Working artifacts (`docs/`)
+
+`docs/plans/` and `docs/verification/` are Polaris's own working artifacts, not shipped content:
+
+- `docs/plans/` — phased plans for work on this repo (e.g. review-fix runs). The planner/`/execute` flow reads these.
+- `docs/verification/` — verification reports the reviewer/`/verify` flow writes when checking those phases.
+
+Both are intentionally tracked as project history — keep them. They are never installed into consumer projects.
+
 ## Conventions
 
 - Skills are markdown files — no code execution, just instructions for Claude
@@ -45,7 +54,7 @@ context-pull.sh  Extracts Django backend context for frontend sessions
 2. Add it to relevant profiles in `profiles/*.txt`
 3. If it's large (100+ lines of reference material), use `cmd:name=` in profiles
 4. If adapted from external source, add to README.md attribution table
-5. Follow the patterns in `skills/meta/writing-skills.md` for structure guidance
+5. Follow the patterns in the `/writing-skills` skill (`skills/meta/writing-skills.md`) for structure guidance
 
 ## Adding a new stack profile
 
