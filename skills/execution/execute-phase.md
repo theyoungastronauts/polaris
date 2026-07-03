@@ -12,7 +12,9 @@ If the user specified a phase number, use that. Otherwise, review the plan and a
 
 ## 3. Plan the Implementation
 
-**Enter plan mode before writing any code.** Read through the phase tasks, explore the existing codebase, and present a concrete implementation plan:
+**If a `/autopilot` or `/orchestrator` lead spawned you against a pre-approved plan.md, skip plan mode** — the approved plan is your approval. Explore the codebase as needed and go straight to implementation.
+
+**In an interactive session, enter plan mode before writing any code.** Read through the phase tasks, explore the existing codebase, and present a concrete implementation plan:
 
 - Which files you'll create or modify
 - What approach you'll take for each task

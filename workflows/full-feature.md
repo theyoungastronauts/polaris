@@ -42,7 +42,7 @@ Repeat for each phase:
 - Fix any FAIL items, re-verify if needed
 
 **Commit and move on:**
-- On PASS, the reviewer commits the phase (implementation + verification report) to main
+- On PASS, the review session commits the phase (implementation + verification report) to main — the session that owns the work commits (in the hands-off flows below, that's the lead)
 - Between phases, the commit history provides a natural review point
 - If this phase produced API changes, generate the integration summary for frontend phases
 - Continue to the next phase

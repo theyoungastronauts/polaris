@@ -42,5 +42,6 @@ skills/git/worktrees.md
 # Agents
 agents/planner.md
 agents/design-intake.md
+agents/executor.md
 agents/reviewer.md
 agents/drift-detector.md

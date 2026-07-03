@@ -122,8 +122,7 @@ should not prompt the user for any bootstrap inputs.
 
 **Parallel bootstrap (2+ sub-projects):**
 
-1. Create a team named "scaffold" using TeamCreate
-2. Spawn one agent per sub-project using the Task tool with `team_name: "scaffold"`:
+1. Spawn one named agent per sub-project using the Agent tool (called Task in older Claude Code versions). Give each a `name:` so you can address it with SendMessage:
 
    For each sub-project, spawn a general-purpose agent with the pre-filled config:
    > You are bootstrapping the {label} sub-project at {root}/{suffix}/.
@@ -136,8 +135,8 @@ should not prompt the user for any bootstrap inputs.
    > After bootstrap completes, run: git add . && git commit -m "chore: initial {label} scaffold"
    > Report back what was created.
 
-3. Wait for all agents to complete
-4. Send shutdown requests and delete the team
+2. Wait for all agents to complete
+3. Send each agent a final message once all bootstraps are done
 
 **Single sub-project (no team needed):**
 
@@ -217,5 +216,5 @@ Project is scaffolded. Next:
 - **Confirm before creating** -- always show the plan and get user approval first
 - **Monorepo with subdirectories** -- stacks live as subdirectories in a single repo
 - **Scaffold before planning** -- real project structure makes plans more concrete
-- **Parallel when possible** -- bootstrap sub-projects concurrently using teams
+- **Parallel when possible** -- bootstrap sub-projects concurrently with named agents
 - **Bootstrap commands do the heavy lifting** -- this skill orchestrates; the bootstrap commands handle details

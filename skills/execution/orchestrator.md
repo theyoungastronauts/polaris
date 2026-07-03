@@ -65,19 +65,19 @@ Typical patterns:
 - Node/TS: `npm test`, `npm run lint`
 - Django + Docker: `docker compose exec api pytest`, `docker compose exec api ruff check .`
 
-## 5. Create the Team
+## 5. Spawn the Agents
 
-Create a team named "orchestrator" using TeamCreate.
+Spawn agents with the Agent tool (called Task in older Claude Code versions), giving each a `name:` so you can address it with SendMessage.
 
 **Direct Mode** — no persistent agents. Executors are spawned per wave in step 6a.
 
-**Phased Mode** — spawn two persistent teammates:
+**Phased Mode** — spawn two persistent agents:
 
 **Executor** (name: "executor", subagent_type: "general-purpose"):
 > You are an execution agent. Read `.claude/agents/executor.md` for your role. You will receive phase assignments. For each: read plan.md, find the phase, implement all tasks. Do NOT enter plan mode — the plan is pre-approved. Do NOT commit. Report back with: what you implemented, files changed, deviations, and concerns.
 
 **Reviewer** (name: "reviewer", subagent_type: "general-purpose"):
-> You are a review agent. Read `.claude/agents/reviewer.md` for your role. You will receive phase assignments to verify. For each: read plan.md, find the phase, verify the implementation. Do NOT commit — the lead commits. Produce the verification report at `docs/verification/phase-N-[name].md` and report your verdict (PASS, PASS WITH WARNINGS, or FAIL) with findings.
+> You are a review agent. Read `.claude/agents/reviewer.md` for your role. You will receive phase assignments to verify. For each: read plan.md, find the phase, verify the implementation. Do NOT commit — the lead commits. Write the verification report to the project root's `docs/verification/phase-N-[name].md` (one level above the sub-project) and report your verdict (PASS, PASS WITH WARNINGS, or FAIL) with findings.
 
 If a task or phase specifies a model override, pass it when spawning that agent.
 
@@ -145,9 +145,8 @@ When phases in a plan are marked as a parallel group (no cross-dependencies):
 
 After all tasks/phases pass:
 
-1. Send shutdown requests to all teammates.
-2. Delete the team.
-3. Report summary:
+1. Send all agents a final message that the queue is complete so they can wrap up.
+2. Report summary:
    - Tasks/phases completed
    - Warnings logged
    - Commits made

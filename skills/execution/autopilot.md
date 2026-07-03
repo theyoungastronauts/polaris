@@ -19,17 +19,15 @@ Typical patterns:
 - Node/TS: `npm test`, `npm run lint`
 - Django + Docker: `docker compose exec api pytest`, `docker compose exec api ruff check .`
 
-## 3. Create the Team
+## 3. Spawn the Agents
 
-Create a team named "autopilot" using TeamCreate.
-
-Spawn two teammates using the Agent tool (named Task in older Claude Code versions) with `team_name: "autopilot"`:
+Spawn two named agents using the Agent tool (called Task in older Claude Code versions). Give each a `name:` so you can address it with SendMessage:
 
 **Executor** (name: "executor", subagent_type: "general-purpose"):
 > You are an execution agent. Read the executor agent definition in `.claude/agents/executor.md` (or `agents/executor.md`) for your role. You will receive messages assigning you phases to implement. For each assignment: read plan.md, find the phase, and implement all tasks. Do NOT enter plan mode — the plan is pre-approved. Do NOT commit. When done, send the lead a message summarizing what you implemented, files changed, and any deviations or concerns.
 
 **Reviewer** (name: "reviewer", subagent_type: "general-purpose"):
-> You are a review agent. Read the reviewer agent definition in `.claude/agents/reviewer.md` (or `agents/reviewer.md`) for your role. You will receive messages assigning you phases to verify. For each assignment: read plan.md, find the phase, and verify the implementation. Do NOT commit — the lead commits. Produce the verification report at `docs/verification/phase-N-[name].md` and send the lead a message with the verdict (PASS, PASS WITH WARNINGS, or FAIL) and a summary of findings.
+> You are a review agent. Read the reviewer agent definition in `.claude/agents/reviewer.md` (or `agents/reviewer.md`) for your role. You will receive messages assigning you phases to verify. For each assignment: read plan.md, find the phase, and verify the implementation. Do NOT commit — the lead commits. Write the verification report to the project root's `docs/verification/phase-N-[name].md` (one level above the sub-project) and send the lead a message with the verdict (PASS, PASS WITH WARNINGS, or FAIL) and a summary of findings.
 
 ## 4. Create Tasks
 
@@ -78,9 +76,8 @@ Wait for the reviewer's verdict.
 ## 6. Completion
 
 After all phases pass:
-1. Send shutdown requests to both teammates
-2. Delete the team
-3. Report summary: phases completed, warnings logged, commits made, suggested next steps
+1. Send both agents a final message that all phases are complete so they can wrap up
+2. Report summary: phases completed, warnings logged, commits made, suggested next steps
 
 ## Error Handling
 

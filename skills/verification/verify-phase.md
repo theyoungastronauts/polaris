@@ -92,6 +92,8 @@ PASS / PASS WITH WARNINGS / FAIL
 
 ## 7. Commit (on PASS only)
 
+This step applies when you own the phase's work — a top-level manual review session. If a `/autopilot` or `/orchestrator` lead spawned you as the reviewer, do **not** commit: report your verdict and let the lead commit. The session that owns the loop is the one that commits.
+
 If the verdict is **PASS** or **PASS WITH WARNINGS** (and the user approves), commit all changes for the phase:
 
 - Stage all relevant files
