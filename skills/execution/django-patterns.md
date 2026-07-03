@@ -39,6 +39,53 @@ Guide Claude Code when implementing Django/DRF features. Follow these convention
 - `project/urls.py` aggregates with namespacing: `path("api/v1/{app}/", include(({app}_urlpatterns, "{app}")))`
 - Use DRF routers for ViewSets
 
+## Canonical API Contract
+
+This is the **source of truth** for the cross-stack API. The Django backend ships exactly this; every decoupled client (Next.js, Flutter) consumes exactly this. Keep paths, identifiers, and payload shapes byte-for-byte consistent with this section — do not restate them differently elsewhere.
+
+**Prefix:** every endpoint lives under `/api/v1` with a trailing slash on every path.
+
+**Identifiers:** clients only ever see `uuid`. Models keep an internal integer primary key for FK/index efficiency, but URLs and payloads expose the public `uuid` field only — never the integer `id`. Detail routes are keyed on it: `path("<uuid:uuid>/", ...)`.
+
+**Auth endpoints:**
+
+| Method | Path | Request | Response |
+|--------|------|---------|----------|
+| POST | `/api/v1/auth/login/` | `{email, password}` | `{access, refresh}` |
+| POST | `/api/v1/auth/refresh/` | `{refresh}` | `{access}` |
+| GET | `/api/v1/auth/me/` | — (Bearer access token) | user object |
+| POST | `/api/v1/auth/register/` | `{username, email, password, first_name, last_name}` | `{user, tokens: {access, refresh}}` |
+
+- **Login** returns the token pair directly: `{access, refresh}`.
+- **Refresh** returns `{access}` (a new access token from a valid refresh token).
+- **Register** wraps the created user and its tokens: `{user, tokens: {access, refresh}}`.
+- The **user object** (from `/api/v1/auth/me/` and inside register's `user`) is `{uuid, username, email, first_name, last_name}` — no integer `id`.
+
+**Resource endpoints** follow REST collection/detail conventions under the prefix, keyed by `uuid`:
+
+| Method | Path | Purpose |
+|--------|------|---------|
+| GET | `/api/v1/{resource}/` | list (paginated) |
+| POST | `/api/v1/{resource}/` | create |
+| GET | `/api/v1/{resource}/<uuid>/` | retrieve |
+| PATCH | `/api/v1/{resource}/<uuid>/` | update |
+| DELETE | `/api/v1/{resource}/<uuid>/` | delete |
+
+(The self-contained full-stack Next.js app applies the same prefix, `uuid`, and pagination shape to its own route handlers — e.g. `/api/v1/posts` — though Next.js route paths omit the trailing slash.)
+
+**Pagination:** list endpoints are page-number paginated. Query params: `page` and `page_size`. Response shape:
+
+```json
+{
+  "page": 1,
+  "count": 42,
+  "num_pages": 5,
+  "results": [ ... ]
+}
+```
+
+`count` is the total item count across all pages, `num_pages` the total page count, `page` echoes the current page, and `results` holds the current page's items. (This is a custom paginator — not DRF's default `{count, next, previous, results}`.)
+
 ## Celery Tasks
 - Use `@shared_task(bind=True, max_retries=3, default_retry_delay=60)`
 - Tasks call services — no business logic in the task itself

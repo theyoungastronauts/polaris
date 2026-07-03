@@ -505,15 +505,25 @@ export { emailWorker };
 ```ts
 import { db } from "@/lib/db";
 import { posts, type NewPost, type Post } from "@/lib/db/schema";
-import { and, eq } from "drizzle-orm";
+import { and, count, eq } from "drizzle-orm";
 
 // Queries are scoped to the owning user (STANDARD+ auth tier). Minimal
 // (no-auth) blueprint: drop the userId parameters and the userId filters.
-export async function listPosts(userId: string): Promise<Post[]> {
-  return db.query.posts.findMany({
-    where: eq(posts.userId, userId),
-    orderBy: (posts, { desc }) => [desc(posts.createdAt)],
-  });
+export async function listPosts(
+  userId: string,
+  { page, pageSize }: { page: number; pageSize: number }
+): Promise<{ results: Post[]; count: number }> {
+  const offset = (page - 1) * pageSize;
+  const [results, totals] = await Promise.all([
+    db.query.posts.findMany({
+      where: eq(posts.userId, userId),
+      orderBy: (posts, { desc }) => [desc(posts.createdAt)],
+      limit: pageSize,
+      offset,
+    }),
+    db.select({ total: count() }).from(posts).where(eq(posts.userId, userId)),
+  ]);
+  return { results, count: totals[0].total };
 }
 
 export async function getPost(
@@ -615,14 +625,30 @@ const createPostSchema = z.object({
 // middleware treats /api/v1/* as public, so each handler authenticates itself
 // (STANDARD+ auth tier). Minimal (no-auth) blueprint: drop the auth() guards
 // and the userId scoping.
-export async function GET() {
+export async function GET(request: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const posts = await postService.listPosts(session.user.id);
-  return NextResponse.json({ data: posts });
+  // Canonical pagination contract: page/page_size params → {page, count, num_pages, results}
+  const { searchParams } = new URL(request.url);
+  const page = Math.max(1, Number(searchParams.get("page")) || 1);
+  const pageSize = Math.min(
+    100,
+    Math.max(1, Number(searchParams.get("page_size")) || 20)
+  );
+
+  const { results, count } = await postService.listPosts(session.user.id, {
+    page,
+    pageSize,
+  });
+  return NextResponse.json({
+    page,
+    count,
+    num_pages: Math.max(1, Math.ceil(count / pageSize)),
+    results,
+  });
 }
 
 export async function POST(request: NextRequest) {

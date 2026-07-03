@@ -331,10 +331,14 @@ application = get_wsgi_application()
 from django.contrib import admin
 from django.urls import include, path
 
+# [STANDARD+] auth app (access) — omit this import and the auth include for the
+# minimal (no-auth) tier
+from access.urls import urlpatterns as auth_urlpatterns
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     # API v1
-    # path("api/v1/auth/", include((auth_urlpatterns, "auth"))),
+    path("api/v1/auth/", include((auth_urlpatterns, "auth"))),  # [STANDARD+]
 ]
 ```
 
@@ -715,6 +719,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
+    "DEFAULT_PAGINATION_CLASS": "project.pagination.StandardResultsSetPagination",
+    "PAGE_SIZE": 20,
 }
 ```
 
@@ -741,6 +747,8 @@ REST_FRAMEWORK = {
     "DEFAULT_PARSER_CLASSES": [
         "rest_framework.parsers.JSONParser",
     ],
+    "DEFAULT_PAGINATION_CLASS": "project.pagination.StandardResultsSetPagination",
+    "PAGE_SIZE": 20,
 }
 
 SIMPLE_JWT = {
@@ -750,15 +758,47 @@ SIMPLE_JWT = {
     "REFRESH_TOKEN_LIFETIME": timedelta(
         days=ENV.int("JWT_REFRESH_TOKEN_LIFETIME_DAYS", default=7)
     ),
-    "ROTATE_REFRESH_TOKENS": True,
-    "BLACKLIST_AFTER_ROTATION": True,
+    # Rotation off: the contract's refresh response is `{access}` only, and the
+    # decoupled frontend keeps its original refresh token across calls. Stock
+    # TokenRefreshView returns a new `refresh` in the body when rotation is on,
+    # which would silently diverge from both. Turn rotation on only if the
+    # frontend is updated to persist the rotated refresh token on every call.
+    "ROTATE_REFRESH_TOKENS": False,
     "UPDATE_LAST_LOGIN": True,
     "ALGORITHM": "HS256",
     "AUTH_HEADER_TYPES": ("Bearer",),
     "AUTH_HEADER_NAME": "HTTP_AUTHORIZATION",
-    "USER_ID_FIELD": "id",
+    # uuid, not the integer PK — a JWT's claims are base64, not encrypted, so
+    # the identity field is client-visible. Keeps the contract's "clients only
+    # ever see uuid" true for tokens too, not just URLs and payloads.
+    "USER_ID_FIELD": "uuid",
     "USER_ID_CLAIM": "user_id",
 }
+```
+
+### project/pagination.py `[ALL]`
+
+Custom paginator emitting the canonical contract shape (`{page, count, num_pages, results}`) with `page`/`page_size` query params. Wired in above as `DEFAULT_PAGINATION_CLASS`, so every DRF list endpoint paginates in this shape automatically.
+
+```python
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
+
+
+class StandardResultsSetPagination(PageNumberPagination):
+    page_size = 20
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+    def get_paginated_response(self, data):
+        return Response(
+            {
+                "page": self.page.number,
+                "count": self.page.paginator.count,
+                "num_pages": self.page.paginator.num_pages,
+                "results": data,
+            }
+        )
 ```
 
 ### project/settings/cors.py `[ALL]`
@@ -1260,6 +1300,9 @@ class User(AbstractUser):
         editable=False,
         db_index=True,
     )
+    # Unique so the contract's email-based login (/api/v1/auth/login/) can
+    # resolve a single account. Public identifier stays `uuid`, not the PK.
+    email = models.EmailField(unique=True)
     metadata = models.JSONField(default=dict, blank=True, null=True)
 
     class Meta:
@@ -1297,12 +1340,119 @@ class AccessConfig(AppConfig):
     name = "access"
 ```
 
+### access/serializers.py
+
+```python
+from django.contrib.auth import get_user_model
+from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
+
+User = get_user_model()
+
+
+def tokens_for(user) -> dict:
+    refresh = RefreshToken.for_user(user)
+    return {"access": str(refresh.access_token), "refresh": str(refresh)}
+
+
+class UserSerializer(serializers.ModelSerializer):
+    # Public identifier is uuid — the integer PK is never exposed.
+    class Meta:
+        model = User
+        fields = ["uuid", "username", "email", "first_name", "last_name"]
+        read_only_fields = ["uuid"]
+
+
+class RegisterSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ["username", "email", "password", "first_name", "last_name"]
+
+    def create(self, validated_data):
+        password = validated_data.pop("password")
+        user = User(**validated_data)
+        user.set_password(password)
+        user.save()
+        return user
+
+
+class LoginSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    password = serializers.CharField(write_only=True)
+
+    def validate(self, attrs):
+        user = User.objects.filter(email=attrs["email"]).first()
+        if user is None or not user.check_password(attrs["password"]):
+            raise serializers.ValidationError("Invalid email or password.")
+        if not user.is_active:
+            raise serializers.ValidationError("Account is disabled.")
+        attrs["user"] = user
+        return attrs
+```
+
+### access/views.py
+
+```python
+from rest_framework import status
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+
+from .serializers import (
+    LoginSerializer,
+    RegisterSerializer,
+    UserSerializer,
+    tokens_for,
+)
+
+
+class RegisterView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = RegisterSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        user = serializer.save()
+        return Response(
+            {"user": UserSerializer(user).data, "tokens": tokens_for(user)},
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        return Response(tokens_for(serializer.validated_data["user"]))
+
+
+class MeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        return Response(UserSerializer(request.user).data)
+```
+
 ### access/urls.py
+
+Ships the contract's auth endpoints. Refresh reuses SimpleJWT's `TokenRefreshView` (returns `{access}`).
 
 ```python
 from django.urls import path
+from rest_framework_simplejwt.views import TokenRefreshView
 
-urlpatterns = []
+from . import views
+
+urlpatterns = [
+    path("login/", views.LoginView.as_view(), name="login"),
+    path("refresh/", TokenRefreshView.as_view(), name="refresh"),
+    path("me/", views.MeView.as_view(), name="me"),
+    path("register/", views.RegisterView.as_view(), name="register"),
+]
 ```
 
 ---
