@@ -4,8 +4,8 @@
 #
 # Django API project skills
 
-skills/execution/django-patterns.md
-cmd:django-bootstrap=skills/execution/django-bootstrap.md
-skills/verification/verify-django.md
+django-patterns
+django-bootstrap
+verify-django
 agents/executor.md
 templates/integration-summary.md

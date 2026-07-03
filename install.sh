@@ -247,16 +247,25 @@ copy_skill() {
     _copy_file "$src" "$dest" "$dry_run" "$force"
 }
 
-# Copy a file as a slash command (installed to .claude/commands/<name>.md)
-copy_command() {
-    local cmd_name="$1"  # command name, e.g. "react"
-    local src="$2"       # relative path in repo
-    local dest_dir="$3"  # target root, e.g. /path/to/project/.claude
-    local dry_run="${4:-false}"
-    local force="${5:-false}"
+# Copy a native skill directory (skills/<name>/) into the target, preserving
+# structure. Each file is copied via _copy_file so checksum/stale detection works.
+copy_skill_dir() {
+    local name="$1"      # skill dir name, e.g. "django-patterns"
+    local dest_dir="$2"  # target root, e.g. /path/to/project/.claude
+    local dry_run="${3:-false}"
+    local force="${4:-false}"
 
-    local dest="$dest_dir/commands/${cmd_name}.md"
-    _copy_file "$src" "$dest" "$dry_run" "$force"
+    local src_dir="$SKILLS_REPO/skills/$name"
+    if [[ ! -d "$src_dir" || ! -f "$src_dir/SKILL.md" ]]; then
+        err "profile references a missing skill: $name (expected skills/$name/SKILL.md)"
+        return 1
+    fi
+
+    local f rel
+    while IFS= read -r f; do
+        rel="${f#"$SKILLS_REPO"/}"
+        _copy_file "$rel" "$dest_dir/$rel" "$dry_run" "$force"
+    done < <(find "$src_dir" -type f | sort)
 }
 
 # Shared copy logic with checksum comparison
@@ -299,21 +308,19 @@ _copy_file() {
     ok "  copied: $src"
 }
 
-# Route a profile line to the right copy function
-# Regular lines → copy_skill, "cmd:name=path" lines → copy_command
+# Route a profile line to the right copy function.
+# A bare name (no slash) is a native skill directory → skills/<name>/.
+# A path (e.g. agents/executor.md) is copied preserving its relative path.
 _install_line() {
     local line="$1"
     local dest_dir="$2"
     local dry_run="$3"
     local force="$4"
 
-    if [[ "$line" == cmd:* ]]; then
-        local cmd_part="${line#cmd:}"
-        local cmd_name="${cmd_part%%=*}"
-        local cmd_src="${cmd_part#*=}"
-        copy_command "$cmd_name" "$cmd_src" "$dest_dir" "$dry_run" "$force"
-    else
+    if [[ "$line" == */* ]]; then
         copy_skill "$line" "$dest_dir" "$dry_run" "$force"
+    else
+        copy_skill_dir "$line" "$dest_dir" "$dry_run" "$force"
     fi
 }
 
@@ -321,17 +328,15 @@ _install_line() {
 
 MANIFEST_FILE=".polaris-manifest.json"
 
-# Convert profile lines to installed file paths
-# Regular lines stay as-is, cmd:name=path becomes commands/name.md
+# Convert profile lines to installed file paths for the manifest.
+# Bare skill name → skills/<name>/SKILL.md; path lines (agents/…) stay as-is.
 _profile_lines_to_paths() {
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
-        if [[ "$line" == cmd:* ]]; then
-            local cmd_part="${line#cmd:}"
-            local cmd_name="${cmd_part%%=*}"
-            echo "commands/${cmd_name}.md"
-        else
+        if [[ "$line" == */* ]]; then
             echo "$line"
+        else
+            echo "skills/$line/SKILL.md"
         fi
     done
 }
@@ -863,68 +868,38 @@ _interactive_select() {
 # Output: one profile line per line (skills, cmd: entries, agents, etc.)
 _merge_profiles() {
     # Args: stack names
+    # Deduplicate by line. Under native skills a name IS its content, so a
+    # repeated name is just a duplicate to drop — the Phase 9 cmd-name conflict
+    # guard is retired: two stacks can no longer bind the same command name to
+    # different files (each bootstrap/skill is its own uniquely-named dir).
     local stacks=("$@")
     local seen_keys=()
-    local seen_lines=()
     local merged_lines=()
+    local stack line k found
 
     for stack in "${stacks[@]}"; do
         while IFS= read -r line; do
-            local key="$line"
-            if [[ "$line" == cmd:* ]]; then
-                key="${line%%=*}"
-            fi
-            # Check if already seen
-            local found=false
-            local i
-            for (( i=0; i<${#seen_keys[@]}; i++ )); do
-                if [[ "${seen_keys[$i]}" == "$key" ]]; then
-                    found=true
-                    # Two selected stacks mapping the same command name to
-                    # different files would silently drop one — fail loudly.
-                    if [[ "$line" == cmd:* && "${seen_lines[$i]}" != "$line" ]]; then
-                        err "Command name conflict: two selected stacks map /${key#cmd:} to different files:"
-                        err "    ${seen_lines[$i]}"
-                        err "    ${line}"
-                        err "Pick a single stack for that command, or rename it in a profile."
-                        exit 1
-                    fi
-                    break
-                fi
+            [[ -z "$line" ]] && continue
+            found=false
+            for k in "${seen_keys[@]+"${seen_keys[@]}"}"; do
+                [[ "$k" == "$line" ]] && { found=true; break; }
             done
             if [[ "$found" == "false" ]]; then
-                seen_keys+=("$key")
-                seen_lines+=("$line")
+                seen_keys+=("$line")
                 merged_lines+=("$line")
             fi
         done < <(read_profile "$stack")
     done
 
-    # Add multi-stack items if more than one stack
     if [[ ${#stacks[@]} -gt 1 ]] && [[ -f "$SKILLS_REPO/profiles/_multi-stack.txt" ]]; then
         while IFS= read -r line; do
-            local key="$line"
-            if [[ "$line" == cmd:* ]]; then
-                key="${line%%=*}"
-            fi
-            local found=false
-            local i
-            for (( i=0; i<${#seen_keys[@]}; i++ )); do
-                if [[ "${seen_keys[$i]}" == "$key" ]]; then
-                    found=true
-                    if [[ "$line" == cmd:* && "${seen_lines[$i]}" != "$line" ]]; then
-                        err "Command name conflict: /${key#cmd:} maps to two different files:"
-                        err "    ${seen_lines[$i]}"
-                        err "    ${line}"
-                        err "Pick a single stack for that command, or rename it in a profile."
-                        exit 1
-                    fi
-                    break
-                fi
+            [[ -z "$line" ]] && continue
+            found=false
+            for k in "${seen_keys[@]+"${seen_keys[@]}"}"; do
+                [[ "$k" == "$line" ]] && { found=true; break; }
             done
             if [[ "$found" == "false" ]]; then
-                seen_keys+=("$key")
-                seen_lines+=("$line")
+                seen_keys+=("$line")
                 merged_lines+=("$line")
             fi
         done < <(read_profile "_multi-stack")
@@ -997,26 +972,20 @@ _extract_title() {
 # Categorize a list of lines into skills/agents/workflows/templates/commands arrays
 # Reads from stdin, populates global arrays: _BLK_SKILLS, _BLK_AGENTS, etc.
 _categorize_lines() {
-    _BLK_SKILLS=()
     _BLK_AGENTS=()
-    _BLK_WORKFLOWS=()
-    _BLK_TEMPLATES=()
     _BLK_COMMANDS=()
 
     while IFS= read -r line; do
         [[ -z "$line" ]] && continue
-        if [[ "$line" == cmd:* ]]; then
-            local cmd_part="${line#cmd:}"
-            local cmd_name="${cmd_part%%=*}"
-            _BLK_COMMANDS+=("$cmd_name")
-        elif [[ "$line" == skills/* ]]; then
-            _BLK_SKILLS+=("$line")
-        elif [[ "$line" == agents/* ]]; then
+        if [[ "$line" == agents/* ]]; then
             _BLK_AGENTS+=("$line")
-        elif [[ "$line" == workflows/* ]]; then
-            _BLK_WORKFLOWS+=("$line")
-        elif [[ "$line" == templates/* ]]; then
-            _BLK_TEMPLATES+=("$line")
+        elif [[ "$line" != */* ]]; then
+            # Bare skill name. Auto-triggering skills need no pointer (native
+            # discovery surfaces them); only list command-only skills so users
+            # know which slash commands exist.
+            if grep -q '^disable-model-invocation: true' "$SKILLS_REPO/skills/$line/SKILL.md" 2>/dev/null; then
+                _BLK_COMMANDS+=("$line")
+            fi
         fi
     done
 }
@@ -1029,12 +998,11 @@ _emit_polaris_block() {
     local stack_context="${3:-}"
 
     echo "<!-- polaris:start -->"
-    echo "## Polaris Skills"
+    echo "## Polaris"
     echo ""
     echo "> Auto-generated by Polaris (${descriptor}). Do not edit between these markers."
-    echo "> Files are relative to ${path_note}"
     echo ""
-    echo "Read the relevant skill file when working on a related task."
+    echo "Polaris skills are installed under \`.claude/skills/\` and discovered automatically — Claude loads a skill when its description or file scope matches the task, so you don't need to reference them by hand."
 
     if [[ -n "$stack_context" ]]; then
         echo ""
@@ -1043,19 +1011,10 @@ _emit_polaris_block() {
         echo "$stack_context"
     fi
 
-    if [[ ${#_BLK_SKILLS[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Skills:**"
-        for s in "${_BLK_SKILLS[@]}"; do
-            local title
-            title="$(_extract_title "$s")"
-            echo "- \`${s}\` — ${title}"
-        done
-    fi
-
     if [[ ${#_BLK_AGENTS[@]} -gt 0 ]]; then
         echo ""
-        echo "**Agents:**"
+        echo "### Agents"
+        echo ""
         for a in "${_BLK_AGENTS[@]}"; do
             local title
             title="$(_extract_title "$a")"
@@ -1063,29 +1022,11 @@ _emit_polaris_block() {
         done
     fi
 
-    if [[ ${#_BLK_WORKFLOWS[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Workflows:**"
-        for w in "${_BLK_WORKFLOWS[@]}"; do
-            local title
-            title="$(_extract_title "$w")"
-            echo "- \`${w}\` — ${title}"
-        done
-    fi
-
-    if [[ ${#_BLK_TEMPLATES[@]} -gt 0 ]]; then
-        echo ""
-        echo "**Templates:**"
-        for t in "${_BLK_TEMPLATES[@]}"; do
-            local title
-            title="$(_extract_title "$t")"
-            echo "- \`${t}\` — ${title}"
-        done
-    fi
-
     if [[ ${#_BLK_COMMANDS[@]} -gt 0 ]]; then
         echo ""
-        echo "**On-demand commands** (invoke as slash commands):"
+        echo "### Command-only skills"
+        echo ""
+        echo "These do not auto-trigger — invoke them explicitly as slash commands:"
         for c in "${_BLK_COMMANDS[@]}"; do
             echo "- \`/${c}\`"
         done
@@ -2032,36 +1973,29 @@ cmd_validate() {
         [[ -f "$f" ]] || continue
         local pname
         pname="$(basename "$f" .txt)"
-        local cmd_names=()
+        local seen_names=()
 
         while IFS= read -r line; do
-            local src="$line"
-            if [[ "$line" == cmd:* ]]; then
-                local cmd_part="${line#cmd:}"
-                local cmd_name="${cmd_part%%=*}"
-                src="${cmd_part#*=}"
-                if [[ "$cmd_part" != *=* ]]; then
-                    err "  $pname: malformed cmd line (expected cmd:name=path): $line"
+            if [[ "$line" == */* ]]; then
+                # Path line (agent def, or an explicit file path)
+                if [[ ! -f "$SCRIPT_DIR/$line" ]]; then
+                    err "  $pname: missing file: $line"
                     (( errors++ )) || true
-                    continue
+                fi
+            else
+                # Bare skill name → native skill directory skills/<name>/SKILL.md
+                if [[ ! -f "$SCRIPT_DIR/skills/$line/SKILL.md" ]]; then
+                    err "  $pname: missing skill: $line (expected skills/$line/SKILL.md)"
+                    (( errors++ )) || true
                 fi
                 local seen
-                for seen in "${cmd_names[@]+"${cmd_names[@]}"}"; do
-                    if [[ "$seen" == "$cmd_name" ]]; then
-                        err "  $pname: duplicate command name: /$cmd_name"
+                for seen in "${seen_names[@]+"${seen_names[@]}"}"; do
+                    if [[ "$seen" == "$line" ]]; then
+                        err "  $pname: duplicate skill: $line"
                         (( errors++ )) || true
                     fi
                 done
-                cmd_names+=("$cmd_name")
-            elif [[ "$line" != skills/* && "$line" != agents/* && "$line" != workflows/* && "$line" != templates/* ]]; then
-                err "  $pname: line won't be listed in CLAUDE.md (unknown category): $line"
-                (( errors++ )) || true
-            fi
-            if [[ ! -f "$SCRIPT_DIR/$src" ]]; then
-                err "  $pname: missing file: $src"
-                (( errors++ )) || true
-            elif ! grep -q -m1 '^#\{1,2\} ' "$SCRIPT_DIR/$src"; then
-                warn "  $pname: no markdown title in $src (CLAUDE.md entry will use filename)"
+                seen_names+=("$line")
             fi
         done < <(grep -v '^\s*#' "$f" | grep -v '^\s*$')
 

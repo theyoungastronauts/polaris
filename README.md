@@ -52,16 +52,10 @@ polaris status
 polaris/
 ├── install.sh              # Installer script
 ├── context-pull.sh         # Cross-repo context extraction
-├── skills/
-│   ├── planning/           # Plan creation, phase breakdown, brainstorming
-│   ├── execution/          # Stack-specific patterns, work discipline, Axon code intelligence
-│   ├── verification/       # Code review checklists per framework
-│   ├── writing/            # Clear writing, AI antipatterns
-│   ├── meta/               # Skills for authoring new skills
-│   ├── memory/             # Project context lifecycle (/remember, /recall)
-│   ├── ux/                 # Product requirements, UX specification
-│   ├── git/                # Commit and PR conventions
-│   └── misc/               # Project-specific skills (not in any profile)
+├── skills/                 # Native Agent Skills — one dir per skill: skills/<name>/SKILL.md.
+│   │                       # Frontmatter sets behavior: auto-trigger (description / paths glob)
+│   │                       # or command-only (disable-model-invocation). ~46 skills.
+│   └── misc/               # Project-specific skills (flat .md, not in any profile — e.g. vfx.md)
 ├── agents/
 │   ├── planner.md          # Planning agent
 │   ├── design-intake.md    # Distills docs/design/ artifacts into a design doc
@@ -141,23 +135,14 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/verify-nextjs-mui` | MUI-specific verification checklist (sx, Emotion SSR, Grid `size`) | nextjs-mui |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
-| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |
-| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, Material UI, JWT auth) | nextjs-mui |
+| `/nextjs-shadcn-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |
+| `/nextjs-mui-bootstrap` | Next.js project scaffolding (App Router, Material UI, JWT auth) | nextjs-mui |
 | `/nextjs-fullstack-bootstrap` | Full-stack Next.js scaffolding (Drizzle, Postgres, Redis, BullMQ, Auth.js) | nextjs-fullstack |
 | `/flutter-bootstrap` | Flutter project scaffolding (Riverpod, go_router, dio) | flutter |
 | `/astro-bootstrap` | Astro project scaffolding (Tailwind v4, DaisyUI, landing page) | astro |
 | `/visual-feedback` | Agentation MCP workflow for browser-annotated UI fixes | nextjs, nextjs-shadcn, nextjs-mui, astro |
 
-Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of the default location:
-
-```
-cmd:react=skills/execution/react-best-practices.md
-cmd:tailwind=skills/execution/tailwind-v4-design-system.md
-cmd:django-bootstrap=skills/execution/django-bootstrap.md
-cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
-cmd:astro-bootstrap=skills/execution/astro-bootstrap.md
-cmd:visual-feedback=skills/execution/visual-feedback.md
-```
+Command-only skills carry `disable-model-invocation: true` in their `SKILL.md` frontmatter — they don't auto-trigger and run as `/name`. Each Next.js variant now has its own bootstrap command (`/nextjs-bootstrap`, `/nextjs-shadcn-bootstrap`, `/nextjs-mui-bootstrap`) since a native skill's directory name is its command name.
 
 ## Axon Integration (Code Intelligence)
 
@@ -276,12 +261,14 @@ polaris global --force
 polaris project --stack django --stack nextjs --force
 ```
 
+> **Upgrading from a pre-native-skills install:** run the same `--force` reinstall (`polaris global --force`, `polaris project --stack … --force`). It installs the new `skills/<name>/SKILL.md` directories and — via manifest diffing — removes the old flat `skills/<cat>/*.md` and `commands/*.md` files your previous install left behind, so no orphaned files remain.
+
 ## Customization
 
-- **Add a skill**: Create a `.md` file in the appropriate `skills/` subdirectory
-- **Add a profile**: Create a `.txt` file in `profiles/` listing the files to include
-- **Check your changes**: Run `./install.sh validate` — catches missing files, duplicate command names, and stack profiles without a CLAUDE.md snippet
-- **Add an on-demand command**: Use `cmd:name=path/to/skill.md` in a profile to install as `/name` slash command
+- **Add a skill**: Create `skills/<skill-name>/SKILL.md` with `name`/`description` frontmatter. Add `disable-model-invocation: true` for command-only skills, or `paths: ["**/*.ext"]` to auto-trigger only on matching files. See the `writing-skills` skill.
+- **Add a profile**: Create a `.txt` file in `profiles/` listing skill names (bare) and `agents/*.md` paths to include
+- **Check your changes**: Run `./install.sh validate` — catches missing skills, duplicate names, and stack profiles without a CLAUDE.md snippet
+- **Reference a skill in a profile**: List its bare directory name (e.g. `django-patterns`) on its own line; install copies the whole `skills/<name>/` dir to `.claude/skills/<name>/`
 - **Add a project-specific skill**: Put it in `skills/misc/` and install with `--extra skills/misc/my-skill.md`. `skills/misc/` is intentionally user-specific and not wired into any profile — files there (e.g. the tracked `vfx.md`) are accepted personal/project exceptions, not shipped defaults.
 - **Project overrides**: Edit installed files in your project's `.claude/` — they won't be overwritten unless you use `--force`
 - **Add an agent**: Create a `.md` file in `agents/`

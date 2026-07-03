@@ -1,6 +1,8 @@
 ---
 name: planner
 description: Turns design docs (brainstorms, PRDs, UX specs in docs/plans/) into a phased plan.md. Use when the user asks to create or revise an implementation plan.
+tools: Read, Grep, Glob, Bash, Write, WebSearch, WebFetch, mcp__axon__axon_query, mcp__axon__axon_context, mcp__axon__axon_impact, mcp__axon__axon_dead_code, mcp__axon__axon_detect_changes, mcp__axon__axon_list_repos
+memory: project
 ---
 
 # Agent: Planner

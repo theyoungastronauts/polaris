@@ -1,6 +1,8 @@
 ---
 name: reviewer
 description: Verifies a completed phase against plan.md, produces a verification report, and commits on PASS. Use for phase verification with fresh eyes, separate from the executor.
+tools: Read, Grep, Glob, Bash, Write, WebSearch, WebFetch, mcp__axon__axon_query, mcp__axon__axon_context, mcp__axon__axon_impact, mcp__axon__axon_dead_code, mcp__axon__axon_detect_changes, mcp__axon__axon_list_repos
+memory: project
 ---
 
 # Agent: Reviewer
