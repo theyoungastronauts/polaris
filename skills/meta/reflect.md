@@ -58,7 +58,7 @@ A finding is project-structural if it describes:
 
 For any project-structural findings, check if `.claude/context/` exists:
 
-**If the scaffold exists:** Propose writing them using the `/remember` format. Present each one:
+**If the scaffold exists:** Propose writing them with the `remember` skill's format — read the installed `remember` skill (`.claude/commands/remember.md`, or `skills/memory/remember.md` in the repo) for its classify → format → write steps rather than guessing the scaffold format. Present each one:
 
 ```
 **Context type:** Decision | Convention | Pattern
@@ -78,9 +78,8 @@ Non-structural findings (personal preferences, debugging tricks, tool configurat
 For each surviving finding, present:
 
 ```
-**Category:** Correction | Debugging | Pattern | Convention
-**Scope:** Global | Project: <name>
-**File:** <target memory file, e.g. preferences.md, debugging.md>
+**Type:** User | Feedback | Project | Reference
+**File:** <memory file slug — one fact per file, e.g. git-commit-style.md>
 **Action:** Add | Update | Remove
 
 > The exact text to write
@@ -88,40 +87,48 @@ For each surviving finding, present:
 **Evidence:** What happened in the session that produced this
 ```
 
-Group by scope (global first, then project), then by file.
+Pick `Type` using the same taxonomy as Memory Organization below. Group by type, then by file.
 
 ## 5. Write Approved Changes
 
 Only write what the user explicitly approves.
 
-**Project context entries** (from Step 3): Use the `/remember` process — classify, deduplicate, format, write to the appropriate context file.
+**Project context entries** (from Step 3): Follow the installed `remember` skill (`.claude/commands/remember.md`, or `skills/memory/remember.md` in the repo) — its classify → deduplicate → format → write process is the single source of truth for context-scaffold entries. Don't re-derive the format here.
 
 **Session memory entries** (from Step 4):
 
-1. Read the target memory file (create if it doesn't exist)
-2. Add or update content, keeping the file organized by topic
-3. Keep entries concise — one to three lines per insight
+1. Write each approved finding to its own file in the memory store, with the `name`/`description`/`metadata` frontmatter from Memory Organization (create the file — don't append into an unrelated one)
+2. Add a one-line pointer to it in `MEMORY.md`
+3. If a memory file already covers the topic, update or replace it rather than adding a duplicate
 
 ## Memory Organization
 
-**Global** (`~/.claude/memory/` or `~/.claude/projects/<path>/memory/`):
-- `MEMORY.md` — High-priority items, always loaded (keep under 200 lines)
-- Topic files (`debugging.md`, `preferences.md`, etc.) — Detailed notes linked from MEMORY.md
-
-**Project** (`.claude/memory/`):
-- Same structure, scoped to the project
-
-Organize by topic, not by date. Use `##` headers to group related items:
+Session memory lives in the harness's per-project auto-memory store:
+`~/.claude/projects/<project-path>/memory/`. The convention is **one fact per
+file**, each file carrying frontmatter:
 
 ```markdown
-## Git Preferences
-- Always use conventional commits with scope
-- Prefer small, focused commits over batched changes
+---
+name: {short-kebab-slug}
+description: {one-line summary — this is what future sessions scan to judge relevance}
+metadata:
+  type: {user | feedback | project | reference}
+---
 
-## Django Patterns
-- Use get_object_or_404 over manual try/except in views
-- Always add related_name to ForeignKey fields
+{The memory itself — a few lines. Link related memories with [[other-slug]].}
 ```
+
+Pick `type` by what the finding is: a fact or preference about the user → `user`;
+guidance on how to work, or a correction → `feedback`; state about the current
+work → `project`; a pointer to where information lives elsewhere → `reference`.
+
+`MEMORY.md` is the **index, not a store**: one pointer line per memory file
+(`- [Title](file.md) — one-line hook`), no frontmatter, kept short (it is always
+loaded into context, and lines past ~200 are truncated). Never write memory
+content directly into `MEMORY.md`.
+
+Organize by topic, not by date. When a finding supersedes an earlier one, update
+or remove that memory file instead of appending a contradiction.
 
 ## What NOT to Save
 

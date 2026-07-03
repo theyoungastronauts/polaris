@@ -1,6 +1,8 @@
 # Skill: Recall
 
-Load relevant project context at the start of a session.
+Load the project **context scaffold** (`.claude/context/`) at the start of a session, or for a specific task.
+
+> Scope: this skill loads the project context scaffold only. Cross-session *session memory* — the auto-memory `memory/MEMORY.md` index — is loaded automatically by the harness at session start, so `/recall` complements it rather than being the whole session-start story.
 
 ## When to Use
 

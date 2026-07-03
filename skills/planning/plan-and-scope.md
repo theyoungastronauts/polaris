@@ -48,23 +48,18 @@ One paragraph describing the desired outcome.
 - ...
 
 ## Phases
-(See phase-breakdown.md skill for detailed phase structure)
+Grouping and ordering only. Each phase's internal structure — objective, input,
+tasks, output, suggested skills, branch, verification checklist — follows the
+`phase-breakdown` skill; don't duplicate those fields here. Tag every phase with
+its `[directory/]` and mark parallel groups and sync points.
 
-### Parallel Group A (Phases 1-2)
+## Parallel Group A (Phases 1-2)
+### Phase 1: [Backend — Name] [server/]
+### Phase 2: [Frontend — Name] [web/]
 
-#### Phase 1: [Backend — Name] [server/]
-- Objective:
-- Deliverables:
-- Estimated complexity: S/M/L
+## Sync Point: [e.g., Integration Summary]
 
-#### Phase 2: [Frontend — Name] [web/]
-- Objective:
-- Deliverables:
-- Estimated complexity: S/M/L
-
-### Sync Point: [e.g., Integration Summary]
-
-### Phase 3: [Name] [directory/]
+## Phase 3: [Name] [directory/]
 ...
 
 ## Repo Strategy
@@ -86,4 +81,4 @@ Sub-projects: [e.g., api (django-api), web (nextjs)]
 - Plans are living documents — update them as you learn
 - Each phase should be independently reviewable (own branch, own PR)
 - A plan that's too detailed upfront is as bad as no plan — aim for clarity on WHAT, flexibility on HOW
-- If a phase has more than ~3 days of work, break it down further
+- Keep phases small — the `phase-breakdown` skill owns the sizing rule (target: 1-3 hours of focused execution, reviewable in a single PR). If a phase feels too big, split it.

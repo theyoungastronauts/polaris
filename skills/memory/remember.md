@@ -38,40 +38,13 @@ If a similar entry exists:
 
 ### Step 3: Format the Entry
 
-**Decision format** (append under `## Entries` in decisions.md):
-```markdown
-### [Decision Title]
-- **Date:** YYYY-MM-DD
-- **Status:** Active
-- **Rationale:** [Why this decision was made, including tradeoffs]
-```
+Each target file carries its own authoritative format — follow it rather than reformatting from memory:
 
-**Convention format** (append under the appropriate category in conventions.md):
-```markdown
-- [Convention]: [Example] — [Why, if not obvious]
-```
+- **Decision** → the `## Format` block at the top of `decisions.md`. Append the new record under `## Entries`.
+- **Convention** → the one-line `- [Convention]: [Example] — [Why, if not obvious]` shape shown under each category in `conventions.md`. Choose the right category heading (Naming, File Organization, Error Handling, Testing, or Project-Specific Rules); if none fit, use Project-Specific Rules.
+- **Pattern** → the `## Pattern File Format` block in `patterns/README.md`. Create a new `.claude/context/patterns/<kebab-name>.md` from it; at minimum fill "When to Use" and "Structure", asking the user for anything you can't infer.
 
-Choose the right category heading: Naming, File Organization, Error Handling, Testing, or Project-Specific Rules. If none fit well, use Project-Specific Rules.
-
-**Pattern format** (create a new file `.claude/context/patterns/<kebab-name>.md`):
-```markdown
-# [Pattern Name]
-<!-- Added: YYYY-MM-DD -->
-
-## When to Use
-[Describe the situation where this pattern applies]
-
-## Structure
-[Show the file layout, class structure, or code skeleton]
-
-## Example
-[Reference an existing implementation: file path + brief explanation]
-
-## Gotchas
-[Common mistakes or non-obvious constraints]
-```
-
-Ask the user to fill in any sections you can't infer. At minimum, "When to Use" and "Structure" should have content.
+If a target file is missing its format header (an older scaffold), fall back to the matching template under `templates/context/` — those templates are the source of truth for the schema.
 
 ### Step 4: Write the Entry
 
