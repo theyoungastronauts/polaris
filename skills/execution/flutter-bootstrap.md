@@ -103,22 +103,25 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # State management
-  flutter_riverpod: ^2.6.0
-  riverpod_annotation: ^2.6.0
+  # State management (Riverpod: runtime pkgs are 3.x, codegen pkgs are 4.x)
+  flutter_riverpod: ^3.3.2
+  riverpod_annotation: ^4.0.3
 
   # Routing
-  go_router: ^14.8.0
+  go_router: ^17.3.0
 
   # Networking
-  dio: ^5.7.0
+  dio: ^5.10.0
 
   # Models
-  freezed_annotation: ^2.4.0
+  freezed_annotation: ^3.1.0
   json_annotation: ^4.9.0
 
+  # Pagination
+  infinite_scroll_pagination: ^5.1.1
+
   # Auth
-  flutter_secure_storage: ^9.2.0
+  flutter_secure_storage: ^10.3.1
   jwt_decoder: ^2.0.0
 
   # UI
@@ -131,9 +134,9 @@ dev_dependencies:
 
   # Code generation
   build_runner: ^2.4.0
-  freezed: ^2.5.0
-  json_serializable: ^6.9.0
-  riverpod_generator: ^2.6.0
+  freezed: ^3.2.5
+  json_serializable: ^6.14.0
+  riverpod_generator: ^4.0.4
 
   # Testing
   mocktail: ^1.0.0
@@ -208,6 +211,8 @@ class App extends ConsumerWidget {
 
 ```dart
 class Env {
+  // Host root only (scheme + host), e.g. https://api.example.com — request
+  // paths carry the canonical `/api/v1/...` prefix, so don't include it here.
   static const String apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
     defaultValue: '{api_base_url}',
@@ -355,8 +360,13 @@ class DioClient {
 
   Future<SessionToken> _refreshToken(String refreshToken) async {
     final response = await Dio(BaseOptions(baseUrl: _dio.options.baseUrl))
-        .post('/auth/token/refresh/', data: {'refresh': refreshToken});
-    return SessionToken.fromJson(response.data);
+        .post('/api/v1/auth/refresh/', data: {'refresh': refreshToken});
+    // Contract: refresh returns {access} only (rotation is off) — keep reusing
+    // the current refresh token rather than expecting a new one back.
+    return SessionToken(
+      access: response.data['access'] as String,
+      refresh: refreshToken,
+    );
   }
 
   Future<Map<String, dynamic>> get(
@@ -669,12 +679,13 @@ part 'user.freezed.dart';
 part 'user.g.dart';
 
 @freezed
-class User with _$User {
+abstract class User with _$User {
   const User._();
 
   factory User({
-    required int id,
+    required String uuid,
     required String email,
+    String? username,
     @JsonKey(name: 'first_name') String? firstName,
     @JsonKey(name: 'last_name') String? lastName,
   }) = _User;
@@ -698,6 +709,7 @@ abstract class AuthService {
   Future<User> login({required String email, required String password});
   Future<User> register({
     required String email,
+    required String username,
     required String password,
     required String firstName,
     required String lastName,
@@ -728,7 +740,7 @@ class AuthServiceDjango implements AuthService {
     required String password,
   }) async {
     final result = await client.post(
-      '/auth/token/',
+      '/api/v1/auth/login/',
       data: {'email': email, 'password': password},
     );
     final token = SessionToken.fromJson(result);
@@ -743,11 +755,13 @@ class AuthServiceDjango implements AuthService {
   @override
   Future<User> register({
     required String email,
+    required String username,
     required String password,
     required String firstName,
     required String lastName,
   }) async {
-    await client.post('/auth/register/', data: {
+    await client.post('/api/v1/auth/register/', data: {
+      'username': username,
       'email': email,
       'password': password,
       'first_name': firstName,
@@ -759,7 +773,7 @@ class AuthServiceDjango implements AuthService {
   @override
   Future<User?> currentUser() async {
     if (session.token == null) return null;
-    final result = await client.get('/user/me/');
+    final result = await client.get('/api/v1/auth/me/');
     return User.fromJson(result);
   }
 
@@ -835,6 +849,7 @@ class Auth extends _$Auth {
 
   Future<void> register({
     required String email,
+    required String username,
     required String password,
     required String firstName,
     required String lastName,
@@ -843,6 +858,7 @@ class Auth extends _$Auth {
     state = await AsyncValue.guard(() async {
       return ref.read(authServiceProvider).register(
             email: email,
+            username: username,
             password: password,
             firstName: firstName,
             lastName: lastName,
@@ -1074,6 +1090,7 @@ class _RegisterFormState extends ConsumerState<RegisterForm> {
   final _passwordController = TextEditingController();
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
+  final _usernameController = TextEditingController();
   bool _loading = false;
   String? _error;
 
@@ -1083,6 +1100,7 @@ class _RegisterFormState extends ConsumerState<RegisterForm> {
     _passwordController.dispose();
     _firstNameController.dispose();
     _lastNameController.dispose();
+    _usernameController.dispose();
     super.dispose();
   }
 
@@ -1097,6 +1115,7 @@ class _RegisterFormState extends ConsumerState<RegisterForm> {
     try {
       await ref.read(authProvider.notifier).register(
             email: _emailController.text.trim(),
+            username: _usernameController.text.trim(),
             password: _passwordController.text,
             firstName: _firstNameController.text.trim(),
             lastName: _lastNameController.text.trim(),
@@ -1137,6 +1156,15 @@ class _RegisterFormState extends ConsumerState<RegisterForm> {
             validator: (v) => ValidationUtils.required(v, 'Last name'),
             decoration: const InputDecoration(
               labelText: 'Last Name',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          const SizedBox(height: 16),
+          TextFormField(
+            controller: _usernameController,
+            validator: (v) => ValidationUtils.required(v, 'Username'),
+            decoration: const InputDecoration(
+              labelText: 'Username',
               border: OutlineInputBorder(),
             ),
           ),

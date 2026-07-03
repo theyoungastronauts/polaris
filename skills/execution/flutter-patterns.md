@@ -46,11 +46,11 @@ part 'book.freezed.dart';
 part 'book.g.dart';
 
 @freezed
-class Book with _$Book {
+abstract class Book with _$Book {
   const Book._();
 
   factory Book({
-    @JsonKey(includeToJson: false) int? id,
+    @JsonKey(includeToJson: false) String? uuid,
     required String title,
     required String author,
     @JsonKey(name: 'published_date') required DateTime publishedDate,
@@ -66,14 +66,15 @@ class Book with _$Book {
         publishedDate: DateTime.now(),
       );
 
-  bool get exists => id != null;
+  bool get exists => uuid != null;
 }
 ```
 
 **Conventions:**
+- Freezed 3.x: annotate data classes `abstract` (unions use `sealed`); `@freezed` alone no longer generates the class body
 - `const Book._()` private constructor enables custom getters/methods
 - `@JsonKey(name: ...)` for snake_case API fields
-- `@JsonKey(includeToJson: false)` for server-managed fields like `id`
+- `@JsonKey(includeToJson: false)` for server-managed fields like `uuid` (the public identifier — never an integer `id`)
 - `factory Book.empty()` for form initialization
 - `bool get exists` for create-vs-update logic
 - Keep models flat — no nested domain/data split
@@ -85,10 +86,10 @@ Abstract interface defines the contract. One concrete implementation per backend
 ```dart
 // book_service.dart
 abstract class BookService {
-  Future<PaginatedResponse<Book>> list({required int page, int limit = 20});
-  Future<Book> retrieve(int id);
+  Future<PaginatedResponse<Book>> list({required int page, int pageSize = 20});
+  Future<Book> retrieve(String uuid);
   Future<Book> save(Book book);
-  Future<void> delete(int id);
+  Future<void> delete(String uuid);
 }
 ```
 
@@ -100,10 +101,10 @@ class BookServiceDjango implements BookService {
   BookServiceDjango(this.client);
 
   @override
-  Future<PaginatedResponse<Book>> list({required int page, int limit = 20}) async {
+  Future<PaginatedResponse<Book>> list({required int page, int pageSize = 20}) async {
     final response = await client.get(
-      '/books/',
-      queryParameters: {'page': page, 'limit': limit, 'ordering': '-created_at'},
+      '/api/v1/books/',
+      queryParameters: {'page': page, 'page_size': pageSize, 'ordering': '-created_at'},
     );
     final results = (response['results'] as List)
         .map((json) => Book.fromJson(json))
@@ -117,24 +118,24 @@ class BookServiceDjango implements BookService {
   }
 
   @override
-  Future<Book> retrieve(int id) async {
-    final response = await client.get('/books/$id/');
+  Future<Book> retrieve(String uuid) async {
+    final response = await client.get('/api/v1/books/$uuid/');
     return Book.fromJson(response);
   }
 
   @override
   Future<Book> save(Book book) async {
     if (book.exists) {
-      final response = await client.patch('/books/${book.id}/', data: book.toJson());
+      final response = await client.patch('/api/v1/books/${book.uuid}/', data: book.toJson());
       return Book.fromJson(response);
     }
-    final response = await client.post('/books/', data: book.toJson());
+    final response = await client.post('/api/v1/books/', data: book.toJson());
     return Book.fromJson(response);
   }
 
   @override
-  Future<void> delete(int id) async {
-    await client.delete('/books/$id/');
+  Future<void> delete(String uuid) async {
+    await client.delete('/api/v1/books/$uuid/');
   }
 }
 ```
@@ -164,8 +165,8 @@ BookService bookService(Ref ref) {
 ```dart
 // book_detail_provider.dart
 @riverpod
-Future<Book> bookDetail(Ref ref, int id) async {
-  return ref.watch(bookServiceProvider).retrieve(id);
+Future<Book> bookDetail(Ref ref, String uuid) async {
+  return ref.watch(bookServiceProvider).retrieve(uuid);
 }
 ```
 
@@ -235,7 +236,7 @@ class BookForm extends _$BookForm {
       state = saved;
       reset();
       ref.invalidate(bookListProvider);
-      if (saved.id != null) ref.invalidate(bookDetailProvider(saved.id!));
+      if (saved.uuid != null) ref.invalidate(bookDetailProvider(saved.uuid!));
       return true;
     } on Failure catch (e) {
       // Surface error to UI via snackbar or dialog — don't swallow
@@ -244,8 +245,8 @@ class BookForm extends _$BookForm {
   }
 
   Future<bool> delete() async {
-    if (state.id == null) return false;
-    await ref.read(bookServiceProvider).delete(state.id!);
+    if (state.uuid == null) return false;
+    await ref.read(bookServiceProvider).delete(state.uuid!);
     reset();
     ref.invalidate(bookListProvider);
     return true;
@@ -295,14 +296,14 @@ class BookListScreen extends BaseScreen {
 
 ```dart
 class BookDetailScreen extends BaseScreen {
-  final int bookId;
-  static String route([int? id]) => '/books/${id ?? ':id'}';
+  final String bookUuid;
+  static String route([String? uuid]) => '/books/${uuid ?? ':uuid'}';
 
-  const BookDetailScreen({super.key, required this.bookId});
+  const BookDetailScreen({super.key, required this.bookUuid});
 
   @override
   Widget body(BuildContext context, WidgetRef ref) {
-    final data = ref.watch(bookDetailProvider(bookId));
+    final data = ref.watch(bookDetailProvider(bookUuid));
     return data.when(
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (error, _) => Center(child: Text(error.toString())),
@@ -365,7 +366,7 @@ class BookListTile extends ConsumerWidget {
     return ListTile(
       title: Text(book.title),
       subtitle: Text(book.author),
-      onTap: () => context.push(BookDetailScreen.route(book.id)),
+      onTap: () => context.push(BookDetailScreen.route(book.uuid)),
     );
   }
 }
@@ -380,103 +381,7 @@ class BookListTile extends ConsumerWidget {
 
 Singleton Dio instance with interceptor chain: auth, token refresh, logging.
 
-```dart
-class DioClient {
-  final Dio _dio;
-  final Session _session;
-
-  DioClient({required Session session})
-      : _session = session,
-        _dio = Dio(
-          BaseOptions(
-            baseUrl: Env.apiBaseUrl,
-            connectTimeout: const Duration(seconds: 10),
-            receiveTimeout: const Duration(seconds: 10),
-            headers: {
-              'Content-Type': 'application/json',
-              'Accept': 'application/json',
-            },
-          ),
-        ) {
-    _dio.interceptors.addAll([
-      _authInterceptor(),
-      if (kDebugMode) LogInterceptor(requestBody: true, responseBody: true),
-    ]);
-  }
-
-  Interceptor _authInterceptor() {
-    return InterceptorsWrapper(
-      onRequest: (options, handler) async {
-        final token = _session.token;
-        if (token != null) {
-          if (token.accessIsExpired && !token.refreshIsExpired) {
-            try {
-              final newToken = await _refreshToken(token.refresh);
-              _session.setToken(newToken);
-              options.headers['Authorization'] = 'Bearer ${newToken.access}';
-            } on DioException {
-              _session.clearToken();
-              return handler.reject(
-                DioException(requestOptions: options, type: DioExceptionType.cancel),
-              );
-            }
-          } else if (!token.accessIsExpired) {
-            options.headers['Authorization'] = 'Bearer ${token.access}';
-          }
-        }
-        handler.next(options);
-      },
-      onError: (error, handler) {
-        if (error.response?.statusCode == 401) {
-          _session.clearToken();
-        }
-        handler.next(error);
-      },
-    );
-  }
-
-  Future<SessionToken> _refreshToken(String refreshToken) async {
-    final response = await Dio(BaseOptions(baseUrl: _dio.options.baseUrl))
-        .post('/auth/token/refresh/', data: {'refresh': refreshToken});
-    return SessionToken.fromJson(response.data);
-  }
-
-  Future<Map<String, dynamic>> get(String path, {Map<String, dynamic>? queryParameters}) async {
-    try {
-      final response = await _dio.get(path, queryParameters: queryParameters);
-      return response.data;
-    } on DioException catch (e) {
-      throw mapDioException(e);
-    }
-  }
-
-  Future<Map<String, dynamic>> post(String path, {Map<String, dynamic>? data}) async {
-    try {
-      final response = await _dio.post(path, data: data);
-      return response.data;
-    } on DioException catch (e) {
-      throw mapDioException(e);
-    }
-  }
-
-  Future<Map<String, dynamic>> patch(String path, {Map<String, dynamic>? data}) async {
-    try {
-      final response = await _dio.patch(path, data: data);
-      return response.data;
-    } on DioException catch (e) {
-      throw mapDioException(e);
-    }
-  }
-
-  Future<void> delete(String path) async {
-    try {
-      await _dio.delete(path);
-    } on DioException catch (e) {
-      throw mapDioException(e);
-    }
-  }
-}
-```
+The canonical `DioClient` is defined in the **flutter-bootstrap** skill at `lib/core/api/dio_client.dart` — don't re-implement it here. It exposes `get`/`post`/`patch`/`delete`, injects the bearer token, refreshes an expired access token against `/api/v1/auth/refresh/` (reusing the stored refresh token, since the contract's refresh returns `{access}` only), and maps every `DioException` to a typed `Failure`.
 
 **Conventions:**
 - Single `Dio` instance — no per-request construction
@@ -491,43 +396,7 @@ JWT session with secure storage, auth state provider, and router guard.
 
 ### Session provider
 
-```dart
-@riverpod
-FlutterSecureStorage secureStorage(Ref ref) {
-  return const FlutterSecureStorage();
-}
-
-@Riverpod(keepAlive: true)
-class Session extends _$Session {
-  @override
-  SessionToken? build() => null;
-
-  Future<void> initialize() async {
-    final storage = ref.read(secureStorageProvider);
-    final access = await storage.read(key: 'access_token');
-    final refresh = await storage.read(key: 'refresh_token');
-    if (access != null && refresh != null) {
-      state = SessionToken(access: access, refresh: refresh);
-    }
-  }
-
-  void setToken(SessionToken token) {
-    state = token;
-    final storage = ref.read(secureStorageProvider);
-    storage.write(key: 'access_token', value: token.access);
-    storage.write(key: 'refresh_token', value: token.refresh);
-  }
-
-  void clearToken() {
-    state = null;
-    final storage = ref.read(secureStorageProvider);
-    storage.delete(key: 'access_token');
-    storage.delete(key: 'refresh_token');
-  }
-
-  SessionToken? get token => state;
-}
-```
+The canonical `secureStorage` provider and the keep-alive `Session` notifier live in the **flutter-bootstrap** skill at `lib/core/providers/session_provider.dart` — `Session` holds the `SessionToken`, persists it to `flutter_secure_storage`, and exposes `initialize`/`setToken`/`clearToken`. Reference it rather than re-declaring it.
 
 ### Auth notifier
 
@@ -589,33 +458,7 @@ GoRouter router(Ref ref) {
 
 Sealed `Failure` class hierarchy. Services throw typed failures. Providers surface via `AsyncValue.error`.
 
-```dart
-sealed class Failure implements Exception {
-  final String message;
-  const Failure(this.message);
-
-  @override
-  String toString() => message;
-}
-
-class ServerFailure extends Failure {
-  final int? statusCode;
-  const ServerFailure(super.message, {this.statusCode});
-}
-
-class NetworkFailure extends Failure {
-  const NetworkFailure([super.message = 'No internet connection']);
-}
-
-class AuthFailure extends Failure {
-  const AuthFailure([super.message = 'Authentication failed']);
-}
-
-class ValidationFailure extends Failure {
-  final Map<String, List<String>> fieldErrors;
-  const ValidationFailure(super.message, {this.fieldErrors = const {}});
-}
-```
+The canonical `Failure` hierarchy — `sealed class Failure` with `ServerFailure`/`NetworkFailure`/`AuthFailure`/`ValidationFailure` — is defined in the **flutter-bootstrap** skill at `lib/core/error/failures.dart`. Reference it rather than re-declaring the classes; the conversion helper below is the DioException→Failure mapping the client layer applies.
 
 ### Converting DioException to Failure (in DioClient or a helper)
 
@@ -709,16 +552,16 @@ class BookFormWidget extends ConsumerWidget {
 
 ```dart
 class BookEditScreen extends BaseScreen {
-  final int? bookId;
-  static String route([int? id]) => '/books/edit/${id ?? ':id'}';
+  final String? bookUuid;
+  static String route([String? uuid]) => '/books/edit/${uuid ?? ':uuid'}';
   static String routeNew() => '/books/new';
 
-  const BookEditScreen({super.key, this.bookId});
+  const BookEditScreen({super.key, this.bookUuid});
 
   @override
   AppBar? appBar(BuildContext context, WidgetRef ref) {
     return AppBar(
-      title: Text(bookId != null ? 'Edit Book' : 'New Book'),
+      title: Text(bookUuid != null ? 'Edit Book' : 'New Book'),
       actions: [
         IconButton(
           onPressed: () async {
@@ -805,32 +648,27 @@ data.when(
 
 ### Infinite scroll
 
-Use the `infinite_scroll_pagination` package with a Riverpod provider managing the `PagingController`.
+Use the `infinite_scroll_pagination` package (v5) with a Riverpod provider exposing the `PagingController`. v5 drops `appendPage`/`appendLastPage`/`addPageRequestListener` — the controller is built from `getNextPageKey` + `fetchPage`, and the widget consumes a `PagingState` via `PagingListener`.
 
 ```dart
 @Riverpod(keepAlive: true)
 class BookInfiniteList extends _$BookInfiniteList {
-  final pagingController = PagingController<int, Book>(firstPageKey: 1);
-
   @override
-  void build() {
-    pagingController.addPageRequestListener(_fetchPage);
+  PagingController<int, Book> build() {
+    final controller = PagingController<int, Book>(
+      // Stop once a fetched page comes back empty; otherwise request page N+1.
+      getNextPageKey: (state) =>
+          state.lastPageIsEmpty ? null : state.nextIntPageKey,
+      fetchPage: (page) async {
+        final data = await ref.read(bookServiceProvider).list(page: page);
+        return data.results;
+      },
+    );
+    ref.onDispose(controller.dispose);
+    return controller;
   }
 
-  Future<void> _fetchPage(int page) async {
-    try {
-      final data = await ref.read(bookServiceProvider).list(page: page);
-      if (data.page >= data.numPages) {
-        pagingController.appendLastPage(data.results);
-      } else {
-        pagingController.appendPage(data.results, page + 1);
-      }
-    } on Failure catch (e) {
-      pagingController.error = e.message;
-    }
-  }
-
-  void refresh() => pagingController.refresh();
+  void refresh() => state.refresh();
 }
 ```
 
@@ -842,15 +680,19 @@ class BookInfiniteListWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final controller = ref.watch(bookInfiniteListProvider.notifier).pagingController;
+    final controller = ref.watch(bookInfiniteListProvider);
 
     return RefreshIndicator(
       onRefresh: () async => ref.read(bookInfiniteListProvider.notifier).refresh(),
-      child: PagedListView<int, Book>(
-        pagingController: controller,
-        builderDelegate: PagedChildBuilderDelegate<Book>(
-          itemBuilder: (context, book, index) => BookListTile(book: book),
-          noItemsFoundIndicatorBuilder: (_) => const Center(child: Text('No books found')),
+      child: PagingListener(
+        controller: controller,
+        builder: (context, state, fetchNextPage) => PagedListView<int, Book>(
+          state: state,
+          fetchNextPage: fetchNextPage,
+          builderDelegate: PagedChildBuilderDelegate<Book>(
+            itemBuilder: (context, book, index) => BookListTile(book: book),
+            noItemsFoundIndicatorBuilder: (_) => const Center(child: Text('No books found')),
+          ),
         ),
       ),
     );
@@ -860,23 +702,7 @@ class BookInfiniteListWidget extends ConsumerWidget {
 
 ### PaginatedResponse model
 
-```dart
-class PaginatedResponse<T> {
-  final int page;
-  final int count;
-  final int numPages;
-  final List<T> results;
-
-  const PaginatedResponse({
-    required this.page,
-    required this.count,
-    required this.numPages,
-    required this.results,
-  });
-
-  bool get canLoadMore => page < numPages;
-}
-```
+The canonical `PaginatedResponse<T>` — `page`, `count`, `numPages`, `results`, and `canLoadMore` — is defined in the **flutter-bootstrap** skill at `lib/core/models/paginated_response.dart`. It maps the contract's `{page, count, num_pages, results}` response shape (query params `page`/`page_size`). Reference it rather than re-declaring it.
 
 ### Filtering and ordering
 
