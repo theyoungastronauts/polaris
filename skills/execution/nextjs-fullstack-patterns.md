@@ -115,7 +115,7 @@ src/
 - Define schemas alongside the route or in a shared `lib/validators/` directory
 - Return 400 with structured error response on validation failure:
   ```ts
-  { error: "Validation failed", details: zodError.flatten().fieldErrors }
+  { error: "Validation failed", details: z.flattenError(zodError).fieldErrors }
   ```
 
 ### Response Shape

@@ -685,6 +685,10 @@ CACHES = {
         "KEY_PREFIX": "{project_prefix}",
         "VERSION": 1,
         "TIMEOUT": CACHE_TIMEOUT_DEFAULT,
+        # Heroku Redis (and some managed providers) serve rediss:// with a
+        # self-signed cert, so verification is disabled here. This trades away
+        # MITM protection and is only acceptable on a trusted private network —
+        # prefer ssl.CERT_REQUIRED with the provider's CA bundle where supported.
         **({"OPTIONS": {"ssl_cert_reqs": ssl.CERT_NONE}} if REDIS_SSL else {}),
     },
 }
@@ -806,7 +810,12 @@ AWS_S3_ENDPOINT_URL = R2_ENDPOINT_URL
 AWS_S3_SIGNATURE_VERSION = "s3v4"
 
 AWS_DEFAULT_ACL = None
-AWS_QUERYSTRING_AUTH = True
+# Public bucket served through R2_CUSTOM_DOMAIN, so object URLs are unsigned —
+# this matches querystring_auth=False in the [FULL] STORAGES block. For a
+# private bucket, set this True and hand out time-limited links via
+# FileService.get_signed_url instead. AWS_QUERYSTRING_EXPIRE applies only when
+# signing is on.
+AWS_QUERYSTRING_AUTH = False
 AWS_S3_FILE_OVERWRITE = False
 AWS_QUERYSTRING_EXPIRE = 3600
 
@@ -1165,7 +1174,10 @@ class EmailService:
     def send(cls, user, email_type, subject, message, html_message=None) -> bool:
         if not cls.should_send(user, email_type):
             return False
-        send_mail(
+        # fail_silently keeps a delivery failure from raising, but send_mail
+        # returns the number of messages actually delivered — return that so the
+        # caller can tell a real send from a silently-swallowed failure.
+        sent = send_mail(
             subject=subject,
             message=message,
             from_email=settings.DEFAULT_FROM_EMAIL,
@@ -1173,7 +1185,7 @@ class EmailService:
             html_message=html_message,
             fail_silently=True,
         )
-        return True
+        return sent > 0
 ```
 
 ### project/services/discord.py
@@ -2256,7 +2268,7 @@ Only generate this section if the user requests AI/LLM integration.
 from .environment import ENV
 
 ANTHROPIC_API_KEY = ENV.str("ANTHROPIC_API_KEY", default="")
-ANTHROPIC_MODEL = ENV.str("ANTHROPIC_MODEL", default="claude-sonnet-4-6")
+ANTHROPIC_MODEL = ENV.str("ANTHROPIC_MODEL", default="claude-sonnet-5")
 ANTHROPIC_MAX_TOKENS = ENV.int("ANTHROPIC_MAX_TOKENS", default=4096)
 ```
 

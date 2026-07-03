@@ -124,7 +124,7 @@ Ask the user for these values:
     "eslint-config-next": "^16",
     "husky": "^9",
     "lint-staged": "^15",
-    "@types/node": "^20",
+    "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19"
   },

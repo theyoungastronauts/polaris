@@ -56,6 +56,7 @@ SPA-like architecture, decoupled from backend. Most components are interactive.
 - Data fetching: `useEffect` + `useState` (no React Query/SWR)
 - State: React Context for global (auth/user), `useState` for local — no Redux/Zustand
 - Auth: JWT via localStorage (`lib/auth.ts`), `UserContext` + `useUser()` hook, `useRequireAuth()` guard, `router.replace` for redirects — no Next.js middleware
+  - Tradeoff: localStorage tokens are readable by any injected script, so an XSS bug leaks the refresh token (and thus long-lived access). Acceptable for a decoupled SPA with disciplined output-escaping/CSP. If you need to survive XSS, store the refresh token in an httpOnly, Secure, SameSite cookie the JS can't read (refresh via a backend route) and keep only the short-lived access token in memory.
 - Errors: try/catch with `ApiError` instanceof check + `react-hot-toast`, always `finally` for loading state
 - Use `/nextjs-bootstrap` with frontend-centric mode to scaffold
 

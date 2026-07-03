@@ -205,20 +205,31 @@ export * from "./posts";
 ### src/lib/db/schema/posts.ts `[ALL]`
 
 ```ts
-import { pgTable, serial, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, serial, text, timestamp, uuid, index } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
+import { users } from "./users";
 
-export const posts = pgTable("posts", {
-  id: serial("id").primaryKey(),
-  uuid: uuid("uuid").defaultRandom().unique().notNull(),
-  title: text("title").notNull(),
-  content: text("content"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at")
-    .defaultNow()
-    .notNull()
-    .$onUpdate(() => new Date()),
-});
+export const posts = pgTable(
+  "posts",
+  {
+    id: serial("id").primaryKey(),
+    uuid: uuid("uuid").defaultRandom().unique().notNull(),
+    // Owner — ties each post to the authenticated user (STANDARD+ auth tier).
+    // Minimal (no-auth) blueprint: drop this column and the auth()/user scoping
+    // shown in the service, actions, and route below; posts are then unowned.
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    content: text("content"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .notNull()
+      .$onUpdate(() => new Date()),
+  },
+  (t) => [index("posts_user_id_idx").on(t.userId)]
+);
 
 export type Post = typeof posts.$inferSelect;
 export type NewPost = typeof posts.$inferInsert;
@@ -494,17 +505,23 @@ export { emailWorker };
 ```ts
 import { db } from "@/lib/db";
 import { posts, type NewPost, type Post } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
-export async function listPosts(): Promise<Post[]> {
+// Queries are scoped to the owning user (STANDARD+ auth tier). Minimal
+// (no-auth) blueprint: drop the userId parameters and the userId filters.
+export async function listPosts(userId: string): Promise<Post[]> {
   return db.query.posts.findMany({
+    where: eq(posts.userId, userId),
     orderBy: (posts, { desc }) => [desc(posts.createdAt)],
   });
 }
 
-export async function getPost(uuid: string): Promise<Post | undefined> {
+export async function getPost(
+  uuid: string,
+  userId: string
+): Promise<Post | undefined> {
   return db.query.posts.findFirst({
-    where: eq(posts.uuid, uuid),
+    where: and(eq(posts.uuid, uuid), eq(posts.userId, userId)),
   });
 }
 
@@ -515,18 +532,19 @@ export async function createPost(data: NewPost): Promise<Post> {
 
 export async function updatePost(
   uuid: string,
+  userId: string,
   data: Partial<NewPost>
 ): Promise<Post | undefined> {
   const [post] = await db
     .update(posts)
     .set(data)
-    .where(eq(posts.uuid, uuid))
+    .where(and(eq(posts.uuid, uuid), eq(posts.userId, userId)))
     .returning();
   return post;
 }
 
-export async function deletePost(uuid: string): Promise<void> {
-  await db.delete(posts).where(eq(posts.uuid, uuid));
+export async function deletePost(uuid: string, userId: string): Promise<void> {
+  await db.delete(posts).where(and(eq(posts.uuid, uuid), eq(posts.userId, userId)));
 }
 ```
 
@@ -536,15 +554,23 @@ export async function deletePost(uuid: string): Promise<void> {
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { auth } from "@/lib/auth";
 import * as postService from "@/server/services/posts";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
 
+// auth() gates every mutation (STANDARD+ auth tier). Minimal (no-auth)
+// blueprint: drop the session checks and the userId argument.
 export async function createPost(
   formData: FormData
 ): Promise<ActionResult<{ uuid: string }>> {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized" };
+  }
+
   const title = formData.get("title") as string;
   const content = formData.get("content") as string;
 
@@ -552,13 +578,22 @@ export async function createPost(
     return { success: false, error: "Title is required" };
   }
 
-  const post = await postService.createPost({ title, content });
+  const post = await postService.createPost({
+    title,
+    content,
+    userId: session.user.id,
+  });
   revalidatePath("/posts");
   return { success: true, data: { uuid: post.uuid } };
 }
 
 export async function deletePost(uuid: string): Promise<ActionResult> {
-  await postService.deletePost(uuid);
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { success: false, error: "Unauthorized" };
+  }
+
+  await postService.deletePost(uuid, session.user.id);
   revalidatePath("/posts");
   return { success: true, data: undefined };
 }
@@ -568,6 +603,7 @@ export async function deletePost(uuid: string): Promise<ActionResult> {
 
 ```ts
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
 import * as postService from "@/server/services/posts";
 import { z } from "zod";
 
@@ -576,23 +612,39 @@ const createPostSchema = z.object({
   content: z.string().optional(),
 });
 
+// middleware treats /api/v1/* as public, so each handler authenticates itself
+// (STANDARD+ auth tier). Minimal (no-auth) blueprint: drop the auth() guards
+// and the userId scoping.
 export async function GET() {
-  const posts = await postService.listPosts();
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const posts = await postService.listPosts(session.user.id);
   return NextResponse.json({ data: posts });
 }
 
 export async function POST(request: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json();
   const result = createPostSchema.safeParse(body);
 
   if (!result.success) {
     return NextResponse.json(
-      { error: "Validation failed", details: result.error.flatten().fieldErrors },
+      { error: "Validation failed", details: z.flattenError(result.error).fieldErrors },
       { status: 400 }
     );
   }
 
-  const post = await postService.createPost(result.data);
+  const post = await postService.createPost({
+    ...result.data,
+    userId: session.user.id,
+  });
   return NextResponse.json(post, { status: 201 });
 }
 ```
@@ -864,12 +916,12 @@ logs-worker:
 ```json
 {
   "dependencies": {
-    "drizzle-orm": "^0.38",
+    "drizzle-orm": "^0.45",
     "pg": "^8.13",
-    "zod": "^3.24"
+    "zod": "^4.4"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30",
+    "drizzle-kit": "^0.31",
     "@types/pg": "^8.11"
   }
 }
@@ -880,18 +932,17 @@ logs-worker:
 ```json
 {
   "dependencies": {
-    "drizzle-orm": "^0.38",
+    "drizzle-orm": "^0.45",
     "pg": "^8.13",
-    "zod": "^3.24",
-    "next-auth": "beta",
-    "@auth/drizzle-adapter": "^1.7",
-    "bcryptjs": "^2.4",
+    "zod": "^4.4",
+    "next-auth": "5.0.0-beta.31",
+    "@auth/drizzle-adapter": "^1.11",
+    "bcryptjs": "^3.0",
     "ioredis": "^5.4"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30",
-    "@types/pg": "^8.11",
-    "@types/bcryptjs": "^2.4"
+    "drizzle-kit": "^0.31",
+    "@types/pg": "^8.11"
   }
 }
 ```
@@ -901,12 +952,12 @@ logs-worker:
 ```json
 {
   "dependencies": {
-    "drizzle-orm": "^0.38",
+    "drizzle-orm": "^0.45",
     "pg": "^8.13",
-    "zod": "^3.24",
-    "next-auth": "beta",
-    "@auth/drizzle-adapter": "^1.7",
-    "bcryptjs": "^2.4",
+    "zod": "^4.4",
+    "next-auth": "5.0.0-beta.31",
+    "@auth/drizzle-adapter": "^1.11",
+    "bcryptjs": "^3.0",
     "ioredis": "^5.4",
     "bullmq": "^5.30",
     "@aws-sdk/client-s3": "^3.700",
@@ -914,9 +965,8 @@ logs-worker:
     "resend": "^4.1"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.30",
+    "drizzle-kit": "^0.31",
     "@types/pg": "^8.11",
-    "@types/bcryptjs": "^2.4",
     "tsx": "^4.19"
   }
 }

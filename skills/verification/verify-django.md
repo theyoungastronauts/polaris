@@ -36,6 +36,7 @@ Run through each section. Flag issues as PASS, WARN, or FAIL.
 ### 5. Security
 - [ ] Authentication required on all non-public endpoints
 - [ ] Object-level permissions checked (not just role-based)
+- [ ] `SECRET_KEY` is set from the environment and not the shipped default (`django-insecure-change-me-in-production`) in production
 - [ ] No sensitive data in response bodies that shouldn't be there
 - [ ] Input validation prevents injection (Django handles most, but check raw SQL)
 
