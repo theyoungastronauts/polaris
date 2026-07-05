@@ -119,7 +119,7 @@ For each wave:
 
 ## 7b. Phased Mode Execution
 
-<!-- Maintainer note: this phased execute → lint/test → verify → commit loop mirrors skills/execution/autopilot.md (§5 Phase Loop). Change both when you touch loop behavior. -->
+<!-- Maintainer note: this phased execute → lint/test → verify → commit loop mirrors skills/autopilot/SKILL.md (§5 Phase Loop). Change both when you touch loop behavior. -->
 
 Before executing each phase, run `git status`. If the working tree is dirty, stop and ask the user to stash, reset, or commit before continuing — never execute a phase on top of an unclean tree. Durable state lives in per-phase commits, not the in-session task list (see Resume).
 

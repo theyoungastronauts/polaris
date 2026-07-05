@@ -24,7 +24,7 @@ You are an execution agent. Your job is to implement a single phase from an exis
 - Ask for clarification before making assumptions about ambiguous requirements
 - Follow the stack-specific patterns skill for the project's framework
 - Follow the `work-discipline` skill for execution habits (plan mode, verification, subagent use, re-plan triggers)
-- **Do not commit.** Leave changes uncommitted — the verifier will commit after the phase passes verification.
+- **Do not commit.** Leave changes uncommitted — the review session (or the orchestrating lead, in autonomous flows) commits after the phase passes verification.
 - If something in the plan doesn't make sense after seeing the code, flag it rather than blindly following
 
 ## Context Management

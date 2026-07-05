@@ -44,7 +44,7 @@ Each task is blocked by its predecessor. This provides progress visibility and s
 
 ## 5. Phase Loop
 
-<!-- Maintainer note: this execute → lint/test → verify → commit loop is duplicated in skills/execution/orchestrator.md (§7b Phased Mode). Change both when you touch loop behavior. -->
+<!-- Maintainer note: this execute → lint/test → verify → commit loop is duplicated in skills/orchestrator/SKILL.md (§7b Phased Mode). Change both when you touch loop behavior. -->
 
 Before executing each phase, run `git status`. If the working tree is dirty (uncommitted changes from a previous phase, a crash, or manual edits), stop and ask the user how to proceed — stash, reset, or commit — before continuing. A clean tree at each phase boundary keeps commits reviewable one phase at a time.
 

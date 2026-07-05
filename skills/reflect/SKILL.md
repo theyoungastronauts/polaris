@@ -49,7 +49,7 @@ Each candidate must pass ALL four checks:
 1. **Stable?** — Will this recur? One-off decisions don't need memory.
 2. **Already documented?** — Check CLAUDE.md, existing memory files, project docs. Don't duplicate.
 3. **Actionable?** — "The API is complex" is useless. "Always pass X header when calling Y endpoint" is useful.
-4. **Correctly scoped?** — Is this global (all projects) or project-specific?
+4. **Project-scoped?** — The memory store is per-project. If a finding applies to all projects (a user preference, a general workflow lesson), still record it here — note the broader scope in the entry so it can be promoted later.
 
 Discard anything that fails any check.
 
@@ -64,7 +64,7 @@ A finding is project-structural if it describes:
 
 For any project-structural findings, check if `.claude/context/` exists:
 
-**If the scaffold exists:** Propose writing them with the `remember` skill's format — read the installed `remember` skill (`.claude/commands/remember.md`, or `skills/memory/remember.md` in the repo) for its classify → format → write steps rather than guessing the scaffold format. Present each one:
+**If the scaffold exists:** Propose writing them with the `remember` skill's format — read the installed `remember` skill (`.claude/skills/remember/SKILL.md`, or `skills/remember/SKILL.md` in the repo) for its classify → format → write steps rather than guessing the scaffold format. Present each one:
 
 ```
 **Context type:** Decision | Convention | Pattern
@@ -99,7 +99,7 @@ Pick `Type` using the same taxonomy as Memory Organization below. Group by type,
 
 Only write what the user explicitly approves.
 
-**Project context entries** (from Step 3): Follow the installed `remember` skill (`.claude/commands/remember.md`, or `skills/memory/remember.md` in the repo) — its classify → deduplicate → format → write process is the single source of truth for context-scaffold entries. Don't re-derive the format here.
+**Project context entries** (from Step 3): Follow the installed `remember` skill (`.claude/skills/remember/SKILL.md`, or `skills/remember/SKILL.md` in the repo) — its classify → deduplicate → format → write process is the single source of truth for context-scaffold entries. Don't re-derive the format here.
 
 **Session memory entries** (from Step 4):
 

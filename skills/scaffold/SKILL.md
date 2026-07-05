@@ -132,7 +132,7 @@ should not prompt the user for any bootstrap inputs.
 
    For each sub-project, spawn a general-purpose agent with the pre-filled config:
    > You are bootstrapping the {label} sub-project at {root}/{suffix}/.
-   > Read the bootstrap skill at .claude/commands/{bootstrap_command}.md and follow it.
+   > Read the bootstrap skill at .claude/skills/{bootstrap_command}/SKILL.md and follow it.
    > Use these pre-filled configuration values (do NOT prompt the user for these):
    >
    > blueprint={blueprint}
