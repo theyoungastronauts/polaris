@@ -572,10 +572,16 @@ export async function deletePost(uuid: string, userId: string): Promise<void> {
 import { revalidatePath } from "next/cache";
 import { auth } from "@/lib/auth";
 import * as postService from "@/server/services/posts";
+import { z } from "zod";
 
 type ActionResult<T = void> =
   | { success: true; data: T }
   | { success: false; error: string };
+
+const createPostSchema = z.object({
+  title: z.string().trim().min(1, "Title is required"),
+  content: z.string().optional(),
+});
 
 // auth() gates every mutation (STANDARD+ auth tier). Minimal (no-auth)
 // blueprint: drop the session checks and the userId argument.
@@ -587,16 +593,16 @@ export async function createPost(
     return { success: false, error: "Unauthorized" };
   }
 
-  const title = formData.get("title") as string;
-  const content = formData.get("content") as string;
-
-  if (!title?.trim()) {
-    return { success: false, error: "Title is required" };
+  const parsed = createPostSchema.safeParse({
+    title: formData.get("title"),
+    content: formData.get("content") ?? undefined,
+  });
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
   }
 
   const post = await postService.createPost({
-    title,
-    content,
+    ...parsed.data,
     userId: session.user.id,
   });
   revalidatePath("/posts");

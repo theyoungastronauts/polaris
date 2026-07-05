@@ -124,7 +124,7 @@ src/
   ```
 
 ### Response Shape
-- Consistent envelope for collections: `{ data: T[], meta: { total, page, pageSize } }`
+- Collections use the canonical paginated envelope: `{ page, count, num_pages, results: T[] }` with `page`/`page_size` query params (matches the cross-stack API contract)
 - Single resources: return the object directly (no envelope)
 - Errors: `{ error: string, details?: Record<string, string[]> }`
 

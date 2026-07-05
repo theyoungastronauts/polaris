@@ -717,13 +717,13 @@ Pass filter/order params through the service and into query parameters:
 ```dart
 Future<PaginatedResponse<Book>> list({
   required int page,
-  int limit = 20,
+  int pageSize = 20,
   String? search,
   String ordering = '-created_at',
 }) async {
-  final response = await client.get('/books/', queryParameters: {
+  final response = await client.get('/api/v1/books/', queryParameters: {
     'page': page,
-    'limit': limit,
+    'page_size': pageSize,
     'ordering': ordering,
     if (search != null) 'search': search,
   });
@@ -747,10 +747,10 @@ void main() {
   });
 
   test('retrieve returns book', () async {
-    final book = Book(id: 1, title: 'Test', author: 'Author', publishedDate: DateTime.now());
-    when(() => mockService.retrieve(1)).thenAnswer((_) async => book);
+    final book = Book(uuid: 'book-uuid-1', title: 'Test', author: 'Author', publishedDate: DateTime.now());
+    when(() => mockService.retrieve('book-uuid-1')).thenAnswer((_) async => book);
 
-    final result = await mockService.retrieve(1);
+    final result = await mockService.retrieve('book-uuid-1');
     expect(result.title, 'Test');
   });
 }

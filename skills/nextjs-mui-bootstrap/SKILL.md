@@ -506,6 +506,7 @@ export const APP_NAME = '{app-title}';
 
 export interface User {
   uuid: string;
+  username: string;
   email: string;
   first_name: string;
   last_name: string;
@@ -521,6 +522,7 @@ export interface RefreshResponse {
 }
 
 export interface RegisterRequest {
+  username: string;
   email: string;
   password: string;
   first_name: string;

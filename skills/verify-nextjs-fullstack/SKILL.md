@@ -32,7 +32,7 @@ Run through each section. Flag issues as PASS, WARN, or FAIL.
 ### 3. Route Handlers (API)
 - [ ] Auth checked via `auth()` on protected endpoints
 - [ ] Request bodies validated with Zod before processing
-- [ ] Response shapes are consistent: `{ data, meta }` for collections, object for singles, `{ error }` for failures
+- [ ] Response shapes are consistent: `{ page, count, num_pages, results }` for collections, object for singles, `{ error }` for failures
 - [ ] Appropriate HTTP status codes (201 for creation, 404 for not found, etc.)
 - [ ] No business logic in handlers — delegated to services
 - [ ] Pagination configured for list endpoints
