@@ -53,7 +53,7 @@ polaris project --clean --stack django --stack nextjs
 polaris project --clean --fresh --stack django --stack nextjs
 ```
 
-`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `templates/`) but leaves `commands/` untouched (it can't tell your commands from Polaris leftovers). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created. Files in `.claude/context/` are only removed while they're still pristine templates — once populated by `/intel` or `/remember` they count as project content and are kept.
+`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `templates/`, plus a legacy `workflows/` if present) but leaves `commands/` untouched (it can't tell your commands from Polaris leftovers). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created. Files in `.claude/context/` are only removed while they're still pristine templates — once populated by `/intel` or `/remember` they count as project content and are kept.
 
 Skip to Step 3 (Execute) if you already have a plan, or Step 1 if you want to brainstorm first.
 
