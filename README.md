@@ -63,8 +63,6 @@ polaris/
 │   ├── reviewer.md         # Verification/review agent
 │   ├── integrator.md       # Cross-repo context agent
 │   └── drift-detector.md   # Checks recent changes against documented conventions
-├── workflows/
-│   └── full-feature.md     # End-to-end feature workflow
 ├── templates/
 │   ├── integration-summary.md
 │   ├── claude-md-defaults.md   # Developer-defaults CLAUDE.md (used by `global --fresh`)
@@ -87,12 +85,12 @@ Some skills are adapted from popular open-source skill repos:
 
 | Skill | Source | Location |
 |-------|--------|----------|
-| Writing Clearly | [softaworks/agent-toolkit](https://github.com/softaworks/agent-toolkit) | `skills/writing/writing-clearly.md` |
-| Brainstorming | [obra/superpowers](https://github.com/obra/superpowers) | `skills/planning/brainstorming.md` |
-| Writing Skills (meta) | [obra/superpowers](https://github.com/obra/superpowers) | `skills/meta/writing-skills.md` |
-| Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/execution/tailwind-v4-design-system.md` |
-| React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/execution/react-best-practices.md` |
-| Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/writing/write-as-human.md` |
+| Writing Clearly | [softaworks/agent-toolkit](https://github.com/softaworks/agent-toolkit) | `skills/writing-clearly/SKILL.md` |
+| Brainstorming | [obra/superpowers](https://github.com/obra/superpowers) | `skills/brainstorming/SKILL.md` |
+| Writing Skills (meta) | [obra/superpowers](https://github.com/obra/superpowers) | `skills/writing-skills/SKILL.md` |
+| Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/tailwind/SKILL.md` |
+| React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/react/SKILL.md` |
+| Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/write-as-human/SKILL.md` |
 | Hook runtime (concept) | [affaan-m/ECC](https://github.com/affaan-m/ECC) | `hooks/` (reimplemented in shell) |
 
 ## Profiles
@@ -166,7 +164,7 @@ The `/scaffold` command auto-detects Axon and runs initial indexing when creatin
 | Execution | `axon_impact`, `axon_context` | Check blast radius before modifying symbols |
 | Verification | `axon_detect_changes`, `axon_dead_code` | Map diffs to affected symbols, catch orphaned code |
 
-See `skills/execution/axon-code-intel.md` for the full integration guide.
+See `skills/axon-code-intel/SKILL.md` for the full integration guide.
 
 ## Project Context
 
@@ -250,9 +248,9 @@ The install script **copies** files (not symlinks) so projects work independentl
 
 ```bash
 polaris status
-# ✓  current: skills/execution/django-patterns.md
-# ⚠  stale:   skills/verification/verify-django.md
-# ⚠  orphan:  skills/custom-thing.md (not in repo)
+# ✓  current: skills/django-patterns/SKILL.md
+# ⚠  stale:   skills/verify-django/SKILL.md
+# ⚠  orphan:  skills/custom-thing/SKILL.md (not in repo)
 ```
 
 Update with:
@@ -261,7 +259,7 @@ polaris global --force
 polaris project --stack django --stack nextjs --force
 ```
 
-> **Upgrading from a pre-native-skills install:** run the same `--force` reinstall (`polaris global --force`, `polaris project --stack … --force`). It installs the new `skills/<name>/SKILL.md` directories and — via manifest diffing — removes the old flat `skills/<cat>/*.md` and `commands/*.md` files your previous install left behind, so no orphaned files remain.
+> **Upgrading from a pre-native-skills install:** run the same `--force` reinstall (`polaris global --force`, `polaris project --stack … --force`). It installs the new `skills/<name>/SKILL.md` directories and — via manifest diffing — removes the old flat `skills/<cat>/*.md` and `commands/*.md` files your previous install left behind, so no orphaned files remain. Exception: installs old enough to have no `.polaris-manifest.json` can't be diffed — run `polaris uninstall` first, then a fresh `polaris project`.
 
 ## Customization
 

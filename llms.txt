@@ -108,7 +108,7 @@ Skills are self-contained markdown files. No dependencies between skills.
 
 ## On-Demand Slash Commands
 
-Installed to `.claude/commands/` — only loaded when invoked.
+Command-only skills (`disable-model-invocation: true`), installed to `.claude/skills/<name>/` — only loaded when invoked as `/<name>`.
 
 | Command | Purpose |
 |---------|---------|
@@ -158,7 +158,7 @@ Installed to `.claude/commands/` — only loaded when invoked.
 
 → Full walkthrough: `USAGE.md`
 → Cheat sheet: `QUICKSTART.md`
-→ Workflow doc: `workflows/full-feature.md`
+→ Workflow doc: the `/full-feature` skill (`skills/full-feature/SKILL.md`)
 
 ## Cross-Repo Context
 
@@ -172,7 +172,7 @@ For full-stack projects with separate backend/frontend repos:
 
 Backend phases generate integration summaries (`docs/integration/[feature].md`) documenting endpoints, request/response shapes, auth, and error codes. Frontend phases consume these as contracts.
 
-→ Details: `skills/execution/cross-repo-context.md`, `templates/integration-summary.md`
+→ Details: `skills/cross-repo-context/SKILL.md`, `templates/integration-summary.md`
 
 ## Axon Integration (Code Intelligence)
 
@@ -184,7 +184,7 @@ Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-p
 
 **Workflow integration:** Planner uses Axon to explore structure and assess risk. Executor checks impact before modifying symbols. Reviewer maps diffs to affected symbols and catches orphaned code.
 
-→ Details: `skills/execution/axon-code-intel.md`
+→ Details: `skills/axon-code-intel/SKILL.md`
 
 ## Key Principles
 
@@ -203,5 +203,5 @@ Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-p
 - **Add an agent:** Create `.md` in `agents/`
 - **Project-specific extras:** `polaris project --extra skills/misc/my-skill.md`
 
-→ Skill authoring guide: the `/writing-skills` skill (`skills/meta/writing-skills.md`)
+→ Skill authoring guide: the `/writing-skills` skill (`skills/writing-skills/SKILL.md`)
 → Repo conventions: `CLAUDE.md`

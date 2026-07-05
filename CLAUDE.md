@@ -5,17 +5,11 @@ This is a skills/agents/workflows repository for Claude Code. It gets installed 
 ## Structure
 
 ```
-skills/          Markdown instruction files Claude loads for guidance
-  planning/      Plan creation, scoping, brainstorming
-  ux/            Product requirements, UX specification
-  execution/     Stack-specific patterns (Django, Next.js, Flutter, React, Tailwind)
-  verification/  Code review checklists per framework
-  writing/       Prose quality, AI antipatterns
-  meta/          Skills for authoring new skills
-  memory/        Project context lifecycle (/remember, /recall)
-  git/           Commit conventions, worktrees
+skills/          Native Agent Skills — one directory per skill: skills/<name>/SKILL.md
+                 Frontmatter drives behavior: auto-trigger (description, optional
+                 paths globs) or command-only (disable-model-invocation: true → /<name>)
+  misc/          Project-specific skills (flat .md, not in any profile — e.g. vfx.md)
 agents/          Role definitions (planner, executor, reviewer, integrator)
-workflows/       Multi-step orchestration docs
 templates/       Fillable templates (integration summaries)
   context/       Context scaffold templates (ROUTER, decisions, conventions, patterns)
 profiles/        .txt manifests + .claude.md snippets per stack
@@ -39,22 +33,22 @@ Both are intentionally tracked as project history — keep them. They are never 
 
 ## Conventions
 
-- Skills are markdown files — no code execution, just instructions for Claude
+- Skills are markdown (SKILL.md + YAML frontmatter) — no code execution, just instructions for Claude
 - Each skill should be self-contained: readable without needing other files
-- Keep skills concise. Token cost matters — every line loads into context
-- Heavy reference docs should use `cmd:` in profiles to install as on-demand slash commands (`.claude/commands/`) instead of always-loaded skills
-- Profile lines: plain path = always loaded, `cmd:name=path` = on-demand `/name` command
+- Keep auto-triggering skills concise. Token cost matters — they load into context when they fire
+- Heavy reference docs set `disable-model-invocation: true` in frontmatter so they only load when invoked as `/<name>` — never auto-trigger a 500-line reference
+- Profile lines: bare `name` = the `skills/<name>/` directory; literal paths (`agents/…`, `templates/…`) are copied as-is
 - External/adapted skills: note source attribution in README.md table
 - `install.sh` copies (not symlinks) so consumer projects are independent
 - Checksum comparison detects stale installs — don't change file semantics without considering downstream staleness
 
 ## Adding a new skill
 
-1. Create `.md` in the appropriate `skills/` subdirectory
-2. Add it to relevant profiles in `profiles/*.txt`
-3. If it's large (100+ lines of reference material), use `cmd:name=` in profiles
+1. Create `skills/<name>/SKILL.md` with frontmatter: `name` (matches the directory), `description` (third-person trigger description), optional `paths` globs for file-scoped auto-triggering
+2. Add the bare skill name to relevant profiles in `profiles/*.txt`
+3. If it's heavy reference material (100+ lines), set `disable-model-invocation: true` so it's `/name`-only
 4. If adapted from external source, add to README.md attribution table
-5. Follow the patterns in the `/writing-skills` skill (`skills/meta/writing-skills.md`) for structure guidance
+5. Follow the patterns in the `/writing-skills` skill (`skills/writing-skills/SKILL.md`) for structure guidance
 
 ## Adding a new stack profile
 
