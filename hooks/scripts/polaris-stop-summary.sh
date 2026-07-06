@@ -1,8 +1,11 @@
 #!/usr/bin/env bash
 # Polaris hook: Stop
 # Summarize the files touched since the last stop, then reset the accumulator.
-# The Stop hook runs after each assistant response, so this prints only when
+# The Stop hook runs after each assistant response, so this emits only when
 # edits actually happened that turn. Non-blocking; never fail the session.
+#
+# Plain stdout from a Stop hook is NOT surfaced back into the session, so the
+# summary is returned as JSON via hookSpecificOutput.additionalContext.
 
 input="$(cat)"
 
@@ -19,9 +22,17 @@ rm -f "$store"
 [[ -z "$sorted" ]] && exit 0
 
 count="$(printf '%s\n' "$sorted" | grep -c .)"
-echo "Polaris: ${count} file(s) touched this turn:"
-printf '%s\n' "$sorted" | while IFS= read -r f; do
-    [[ -n "$f" ]] && echo "  - $f"
-done
+
+summary="Polaris: ${count} file(s) touched this turn:"
+while IFS= read -r f; do
+    [[ -n "$f" ]] && summary+=$'\n'"  - $f"
+done <<< "$sorted"
+
+jq -n --arg ctx "$summary" '{
+  hookSpecificOutput: {
+    hookEventName: "Stop",
+    additionalContext: $ctx
+  }
+}'
 
 exit 0

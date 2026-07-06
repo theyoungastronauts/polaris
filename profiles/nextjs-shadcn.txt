@@ -4,13 +4,12 @@
 #
 # Next.js frontend project skills — ShadCN UI variant
 
-skills/execution/nextjs-patterns.md
-skills/execution/cross-repo-context.md
-skills/verification/verify-nextjs.md
+nextjs-patterns
+cross-repo-context
+verify-nextjs
+verify-nextjs-shadcn
+react
+tailwind
+nextjs-shadcn-bootstrap
+visual-feedback
 agents/executor.md
-
-# On-demand reference docs (invoke with /react, /tailwind, or /nextjs-bootstrap)
-cmd:react=skills/execution/react-best-practices.md
-cmd:tailwind=skills/execution/tailwind-v4-design-system.md
-cmd:nextjs-bootstrap=skills/execution/nextjs-shadcn-bootstrap.md
-cmd:visual-feedback=skills/execution/visual-feedback.md

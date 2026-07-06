@@ -1,6 +1,7 @@
 ---
 name: design-intake
 description: Distills design artifacts in docs/design/ (briefs, wireframes, sitemaps, flows) into a structured design doc downstream agents can act on. Use when starting from existing design work.
+tools: Read, Grep, Glob, Bash, Write, WebSearch, WebFetch
 ---
 
 # Agent: Design Intake

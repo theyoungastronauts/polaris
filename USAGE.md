@@ -41,7 +41,7 @@ cd ~/prj/my-backend-api
 polaris project --stack django --standalone
 ```
 
-This copies skills into `.claude/` (always loaded) and slash commands into `.claude/commands/` (loaded on demand via `/command-name`). Stacks are composable — select a backend and one or more frontends. The `nextjs` stack installs `/react` and `/tailwind` as on-demand commands to keep context light.
+This copies each skill to `.claude/skills/<name>/SKILL.md`. Skills load themselves: auto-triggering skills fire when their description or `paths` glob matches the task, and command-only skills (like `/react` and `/tailwind`) load only when you invoke them by name — keeping baseline context light. Stacks are composable — select a backend and one or more frontends.
 
 **If the project already has a `.claude/` directory** (from a previous Polaris install, manual setup, or another tool), use `--clean` to wipe existing skills before installing:
 
@@ -53,7 +53,7 @@ polaris project --clean --stack django --stack nextjs
 polaris project --clean --fresh --stack django --stack nextjs
 ```
 
-`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `workflows/`, `templates/`, `commands/`). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created. Files in `.claude/context/` are only removed while they're still pristine templates — once populated by `/intel` or `/remember` they count as project content and are kept.
+`--clean` removes all Polaris-tracked files (using the manifest from a previous install). If there's no manifest, it removes the standard `.claude/` subdirectories (`skills/`, `agents/`, `templates/`, plus a legacy `workflows/` if present) but leaves `commands/` untouched (it can't tell your commands from Polaris leftovers). Your `CLAUDE.md` content outside the Polaris markers is preserved; if it has custom content, a `.bak` backup is created. Files in `.claude/context/` are only removed while they're still pristine templates — once populated by `/intel` or `/remember` they count as project content and are kept.
 
 Skip to Step 3 (Execute) if you already have a plan, or Step 1 if you want to brainstorm first.
 
@@ -136,7 +136,7 @@ Open a Claude Code session in your project directory. This is a conversation, no
 
 ```
 You: I want to build [describe your idea]. Let's brainstorm this using the
-     brainstorming skill in .claude/skills/planning/brainstorming.md
+     brainstorming skill.
 ```
 
 Claude will follow the brainstorming skill:
@@ -328,7 +328,7 @@ You: /orchestrator
 You: /orchestrator 3    # resume from task/phase 3
 ```
 
-See `workflows/full-feature.md` for where these fit in the overall workflow.
+See the `/full-feature` workflow for where these fit in the overall workflow.
 
 ---
 
@@ -452,7 +452,7 @@ git checkout -b feature/notifications
 
 ### Multiple Independent Features in Parallel
 
-Use git worktrees to work on unrelated features simultaneously without stashing or context switching. See `skills/git/worktrees.md` for the full setup.
+Use git worktrees to work on unrelated features simultaneously without stashing or context switching. See the `/worktrees` skill for the full setup.
 
 ```bash
 cd ~/prj/my-app/api
@@ -483,7 +483,7 @@ git worktree add ../api-billing -b feature/billing
 | — | Capture decisions/patterns | Any repo (session end) | `/remember` command |
 | — | Cross-repo handoff | Backend → frontend | `integrator` agent + `cross-repo-context` skill |
 | — | Ongoing: single feature | Any repo | Branch → execute → review → PR |
-| — | Ongoing: parallel features | Any repo | Worktrees (see `skills/git/worktrees.md`) |
+| — | Ongoing: parallel features | Any repo | Worktrees (see the `/worktrees` skill) |
 
 ---
 
@@ -497,7 +497,7 @@ git worktree add ../api-billing -b feature/billing
 - **Use `/compact` in Claude Code** when context gets heavy during long execution phases.
 - **Use `/react` or `/tailwind` when you need them.** These are on-demand commands — they only load into context when invoked, keeping your baseline token usage low.
 - **Use `/visual-feedback` for UI iteration.** Install [Agentation](https://agentation.dev) in your project, and humans can annotate the live page in the browser while Claude picks up fixes via MCP. The bootstrap skills offer this as an optional step, or invoke `/visual-feedback` for the workflow.
-- **Install Axon for structural awareness.** `pip install axoniq && axon analyze .` gives agents call graphs, impact analysis, and dead code detection. The MCP server (`axon serve --watch`) keeps the index current as you code. See `skills/execution/axon-code-intel.md`.
+- **Install Axon for structural awareness.** `pip install axoniq && axon analyze .` gives agents call graphs, impact analysis, and dead code detection. The MCP server (`axon serve --watch`) keeps the index current as you code. See `skills/axon-code-intel/SKILL.md`.
 - **Start sessions with `/recall`.** It loads only the context relevant to your task — no wasted tokens on architecture you don't need right now.
 - **Run `/remember` after productive sessions.** Decisions and patterns fade from memory. Capture them while they're fresh — they become context for future sessions.
 - **Run `/intel` periodically.** After major refactors or dependency changes, refresh the context scaffold so it stays accurate.

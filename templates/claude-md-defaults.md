@@ -1,5 +1,9 @@
 # Global Developer Defaults
 
+> Everything above the **Stack-Specific Example** divider is stack-agnostic — keep it.
+> The section below the divider is an illustration for a Django + Next.js project.
+> **Replace it with your own stack's context** — those lines are an example, not defaults every project should keep.
+
 ## How to Work With Me
 
 - **Ask before assuming.** If requirements are ambiguous, ask a clarifying question rather than guessing.
@@ -13,10 +17,6 @@
 
 - When executing phased implementation plans, start making code changes immediately. Do NOT spend the entire session exploring the codebase without producing output. If exploration is needed, timebox it to 2-3 minutes then begin implementation.
 - Always run commands from the correct project directory. Before executing any shell command, verify the current working directory matches the target sub-project. Never mix files between sub-projects (e.g., frontend files into backend folder).
-
-## Tech Stack
-
-This project uses Python (Django/DRF) for backends and TypeScript (Next.js) for frontends, typically in a Docker Compose setup with Celery. Always assume this stack unless told otherwise.
 
 ## Communication
 
@@ -36,22 +36,7 @@ This project uses Python (Django/DRF) for backends and TypeScript (Next.js) for 
 
 ## Testing & Verification
 
-After implementing any feature, always run the full test suite, linter, and type checker before reporting completion. Format: `pytest` (Python), `npm run test && npm run lint && npm run typecheck` (TypeScript/Next.js). Do not consider a phase complete until all checks pass.
-
-## Django Bootstrap Checklist
-
-When bootstrapping Django projects:
-1. Verify PyPI package names before adding to requirements (e.g., `django-admin-auto-filters` vs actual name).
-2. Ensure all apps have initial migrations before running entrypoint.
-3. Check for port conflicts.
-4. Test `wait-for-it.sh` with actual variable values.
-
-## Frontend Testing Conventions
-
-When writing React/Next.js tests:
-1. Use `*ByRole` queries with `name` option instead of `*ByText` to avoid ambiguous matches.
-2. Always wrap components using React `use()` with Suspense boundaries.
-3. Ensure form labels are linked with proper `htmlFor`/`id` attributes.
+After implementing any feature, always run the full test suite, linter, and type checker before reporting completion. Do not consider a phase complete until all checks pass. (Use your project's actual commands — see the stack example below for a Django + Next.js illustration.)
 
 ## Debugging
 
@@ -71,3 +56,33 @@ When writing React/Next.js tests:
 - Use `/compact` proactively when context is getting heavy.
 - If you've lost track, re-read the plan or task description before continuing.
 - When starting a new task, state what you understand the goal to be before diving in.
+
+---
+
+## Stack-Specific Example (replace for your project)
+
+> The rest of this file is an example for a Django + Next.js stack. **Delete or replace it** with your own stack's conventions and commands — these are not universal defaults.
+
+### Tech Stack
+
+This project uses Python (Django/DRF) for backends and TypeScript (Next.js) for frontends, typically in a Docker Compose setup with Celery. Always assume this stack unless told otherwise.
+
+### Test Commands
+
+- Backend: `pytest`
+- Frontend: `npm run test && npm run lint && npm run typecheck`
+
+### Django Bootstrap Checklist
+
+When bootstrapping Django projects:
+1. Verify PyPI package names before adding to requirements (e.g., `django-admin-auto-filters` vs actual name).
+2. Ensure all apps have initial migrations before running entrypoint.
+3. Check for port conflicts.
+4. Test `wait-for-it.sh` with actual variable values.
+
+### Frontend Testing Conventions
+
+When writing React/Next.js tests:
+1. Use `*ByRole` queries with `name` option instead of `*ByText` to avoid ambiguous matches.
+2. Always wrap components using React `use()` with Suspense boundaries.
+3. Ensure form labels are linked with proper `htmlFor`/`id` attributes.

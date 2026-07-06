@@ -1,6 +1,7 @@
 ---
 name: drift-detector
 description: Compares recent code changes against the conventions documented in .claude/context/ and reports aligned/drifted/undocumented findings. Use after the context scaffold exists.
+tools: Read, Grep, Glob, Bash, Write, WebSearch, WebFetch, mcp__axon__axon_query, mcp__axon__axon_context, mcp__axon__axon_impact, mcp__axon__axon_dead_code, mcp__axon__axon_detect_changes, mcp__axon__axon_list_repos
 ---
 
 # Agent: Drift Detector

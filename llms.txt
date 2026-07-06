@@ -12,23 +12,17 @@ Files are **copied** (not symlinked) so projects work independently. A checksum 
 ## Repository Structure
 
 ```
-install.sh              Installer (init, global, project, status, new)
+install.sh              Installer (init, global, new, project, uninstall, hooks, status, validate, list-profiles, list-skills)
 context-pull.sh         Extracts Django backend context for frontend sessions
-skills/
-  planning/             Brainstorming, plan-and-scope, phase-breakdown, scaffold
-  ux/                   PRD, UX spec, UX-to-prompts
-  execution/            Stack patterns + bootstrap (Django, Next.js, Next.js full-stack, Flutter, Astro)
-                        Also: execute-phase, autopilot, orchestrator, architecture-intel,
-                        cross-repo-context, visual-feedback, react-best-practices,
-                        tailwind-v4-design-system, work-discipline, axon-code-intel
-  verification/         verify-phase + per-stack checklists (Django, Next.js, Next.js full-stack, Flutter, Astro)
-  writing/              Clear writing guidelines, write-as-human
-  memory/               Project context lifecycle (/remember, /recall)
-  meta/                 Writing new skills, session reflection
-  git/                  Commit conventions, worktrees
+skills/                 Native Agent Skills — one dir per skill: skills/<name>/SKILL.md.
+                        Frontmatter sets behavior: auto-trigger (description / paths glob) or
+                        command-only (disable-model-invocation → /name). ~46 skills, e.g.
+                        plan-and-scope, phase-breakdown, scaffold, execute, verify, autopilot,
+                        orchestrator, intel, work-discipline, {django,nextjs,flutter,astro}-patterns,
+                        *-bootstrap, verify-{django,nextjs,flutter,astro,…}, recall, remember, reflect.
+                        skills/misc/ holds flat project-specific skills (not in any profile).
 agents/                 planner, executor, reviewer, integrator, design-intake, drift-detector
-workflows/              full-feature.md (end-to-end workflow)
-templates/              integration-summary.md, context/ scaffold templates
+templates/              integration-summary.md, claude-md-defaults.md, context/ scaffold templates
 profiles/               Stack manifests (.txt) + CLAUDE.md snippets (.claude.md)
 ```
 
@@ -72,14 +66,15 @@ Select a backend + 0..N frontends. Each profile lists which skills to install.
 
 Multi-stack installs auto-add `_multi-stack.txt` (integrator agent, cross-repo-context, integration summary template).
 
-**Profile format** (`profiles/*.txt`):
+**Profile format** (`profiles/*.txt`) — bare skill names + agent paths:
 ```
 # stack: backend|frontend
 # label: Display Name
 # directory: default-dir
 
-skills/execution/django-patterns.md          # Always loaded
-cmd:django-bootstrap=skills/execution/django-bootstrap.md  # On-demand /django-bootstrap
+django-patterns          # installs skills/django-patterns/ (auto-triggers, or paths-scoped)
+django-bootstrap         # command-only skill (disable-model-invocation) → /django-bootstrap
+agents/executor.md       # agent definition (copied as-is)
 ```
 
 ## Skills Overview
@@ -113,7 +108,7 @@ Skills are self-contained markdown files. No dependencies between skills.
 
 ## On-Demand Slash Commands
 
-Installed to `.claude/commands/` — only loaded when invoked.
+Command-only skills (`disable-model-invocation: true`), installed to `.claude/skills/<name>/` — only loaded when invoked as `/<name>`.
 
 | Command | Purpose |
 |---------|---------|
@@ -131,13 +126,16 @@ Installed to `.claude/commands/` — only loaded when invoked.
 | `/reflect` | Session reflection/retrospective |
 | `/write-as-human` | Strip AI writing patterns from prose |
 | `/django-bootstrap` | Scaffold Django project |
-| `/nextjs-bootstrap` | Scaffold Next.js project (DaisyUI/ShadCN/MUI per profile) |
+| `/nextjs-bootstrap` · `/nextjs-shadcn-bootstrap` · `/nextjs-mui-bootstrap` | Scaffold a Next.js project (DaisyUI / ShadCN / Material UI) |
 | `/nextjs-fullstack-bootstrap` | Scaffold full-stack Next.js project |
 | `/flutter-bootstrap` | Scaffold Flutter project |
 | `/astro-bootstrap` | Scaffold Astro project |
 | `/react` | React best practices reference |
 | `/tailwind` | Tailwind v4 + DaisyUI patterns |
 | `/visual-feedback` | Browser-annotated UI fix workflow |
+| `/worktrees` | Git worktree setup for parallel features |
+| `/writing-skills` | Guide for authoring new skills |
+| `/full-feature` | End-to-end feature workflow (plan → execute → verify → merge) |
 
 ## Core Workflow
 
@@ -160,7 +158,7 @@ Installed to `.claude/commands/` — only loaded when invoked.
 
 → Full walkthrough: `USAGE.md`
 → Cheat sheet: `QUICKSTART.md`
-→ Workflow doc: `workflows/full-feature.md`
+→ Workflow doc: the `/full-feature` skill (`skills/full-feature/SKILL.md`)
 
 ## Cross-Repo Context
 
@@ -174,7 +172,7 @@ For full-stack projects with separate backend/frontend repos:
 
 Backend phases generate integration summaries (`docs/integration/[feature].md`) documenting endpoints, request/response shapes, auth, and error codes. Frontend phases consume these as contracts.
 
-→ Details: `skills/execution/cross-repo-context.md`, `templates/integration-summary.md`
+→ Details: `skills/cross-repo-context/SKILL.md`, `templates/integration-summary.md`
 
 ## Axon Integration (Code Intelligence)
 
@@ -186,7 +184,7 @@ Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-p
 
 **Workflow integration:** Planner uses Axon to explore structure and assess risk. Executor checks impact before modifying symbols. Reviewer maps diffs to affected symbols and catches orphaned code.
 
-→ Details: `skills/execution/axon-code-intel.md`
+→ Details: `skills/axon-code-intel/SKILL.md`
 
 ## Key Principles
 
@@ -200,11 +198,10 @@ Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-p
 
 ## Extending Polaris
 
-- **Add a skill:** Create `.md` in appropriate `skills/` subdir → add to relevant `profiles/*.txt`
-- **Add a profile:** Create `profiles/<name>.txt` with metadata headers + file list → create companion `profiles/<name>.claude.md`
-- **Add an on-demand command:** Use `cmd:name=path` in a profile
+- **Add a skill:** Create `skills/<name>/SKILL.md` with `name`/`description` frontmatter (add `disable-model-invocation: true` for command-only, or `paths:` to scope auto-trigger) → list its bare name in the relevant `profiles/*.txt`
+- **Add a profile:** Create `profiles/<name>.txt` with metadata headers + a bare-name skill list → create companion `profiles/<name>.claude.md`
 - **Add an agent:** Create `.md` in `agents/`
 - **Project-specific extras:** `polaris project --extra skills/misc/my-skill.md`
 
-→ Skill authoring guide: `skills/meta/writing-skills.md`
+→ Skill authoring guide: the `/writing-skills` skill (`skills/writing-skills/SKILL.md`)
 → Repo conventions: `CLAUDE.md`

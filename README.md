@@ -52,16 +52,10 @@ polaris status
 polaris/
 ├── install.sh              # Installer script
 ├── context-pull.sh         # Cross-repo context extraction
-├── skills/
-│   ├── planning/           # Plan creation, phase breakdown, brainstorming
-│   ├── execution/          # Stack-specific patterns, work discipline, Axon code intelligence
-│   ├── verification/       # Code review checklists per framework
-│   ├── writing/            # Clear writing, AI antipatterns
-│   ├── meta/               # Skills for authoring new skills
-│   ├── memory/             # Project context lifecycle (/remember, /recall)
-│   ├── ux/                 # Product requirements, UX specification
-│   ├── git/                # Commit and PR conventions
-│   └── misc/               # Project-specific skills (not in any profile)
+├── skills/                 # Native Agent Skills — one dir per skill: skills/<name>/SKILL.md.
+│   │                       # Frontmatter sets behavior: auto-trigger (description / paths glob)
+│   │                       # or command-only (disable-model-invocation). ~46 skills.
+│   └── misc/               # Project-specific skills (flat .md, not in any profile — e.g. vfx.md)
 ├── agents/
 │   ├── planner.md          # Planning agent
 │   ├── design-intake.md    # Distills docs/design/ artifacts into a design doc
@@ -69,10 +63,9 @@ polaris/
 │   ├── reviewer.md         # Verification/review agent
 │   ├── integrator.md       # Cross-repo context agent
 │   └── drift-detector.md   # Checks recent changes against documented conventions
-├── workflows/
-│   └── full-feature.md     # End-to-end feature workflow
 ├── templates/
 │   ├── integration-summary.md
+│   ├── claude-md-defaults.md   # Developer-defaults CLAUDE.md (used by `global --fresh`)
 │   └── context/            # Context scaffold templates (ROUTER, decisions, conventions, patterns)
 └── profiles/
     ├── global.txt              # Skills for ~/.claude/
@@ -92,12 +85,12 @@ Some skills are adapted from popular open-source skill repos:
 
 | Skill | Source | Location |
 |-------|--------|----------|
-| Writing Clearly | [softaworks/agent-toolkit](https://github.com/softaworks/agent-toolkit) | `skills/writing/writing-clearly.md` |
-| Brainstorming | [obra/superpowers](https://github.com/obra/superpowers) | `skills/planning/brainstorming.md` |
-| Writing Skills (meta) | [obra/superpowers](https://github.com/obra/superpowers) | `skills/meta/writing-skills.md` |
-| Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/execution/tailwind-v4-design-system.md` |
-| React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/execution/react-best-practices.md` |
-| Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/writing/write-as-human.md` |
+| Writing Clearly | [softaworks/agent-toolkit](https://github.com/softaworks/agent-toolkit) | `skills/writing-clearly/SKILL.md` |
+| Brainstorming | [obra/superpowers](https://github.com/obra/superpowers) | `skills/brainstorming/SKILL.md` |
+| Writing Skills (meta) | [obra/superpowers](https://github.com/obra/superpowers) | `skills/writing-skills/SKILL.md` |
+| Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/tailwind/SKILL.md` |
+| React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/react/SKILL.md` |
+| Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/write-as-human/SKILL.md` |
 | Hook runtime (concept) | [affaan-m/ECC](https://github.com/affaan-m/ECC) | `hooks/` (reimplemented in shell) |
 
 ## Profiles
@@ -136,25 +129,18 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/write-as-human` | Strip AI writing patterns from prose | global |
 | `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
 | `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn, astro |
+| `/verify-nextjs-shadcn` | ShadCN-specific verification checklist (components.json, `cn()`, next-themes) | nextjs-shadcn |
+| `/verify-nextjs-mui` | MUI-specific verification checklist (sx, Emotion SSR, Grid `size`) | nextjs-mui |
 | `/django-bootstrap` | Django project scaffolding (Docker, Celery, split settings) | django |
 | `/nextjs-bootstrap` | Next.js project scaffolding (App Router, DaisyUI, JWT auth) | nextjs |
-| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |
-| `/nextjs-bootstrap` | Next.js project scaffolding (App Router, Material UI, JWT auth) | nextjs-mui |
+| `/nextjs-shadcn-bootstrap` | Next.js project scaffolding (App Router, ShadCN UI, JWT auth) | nextjs-shadcn |
+| `/nextjs-mui-bootstrap` | Next.js project scaffolding (App Router, Material UI, JWT auth) | nextjs-mui |
 | `/nextjs-fullstack-bootstrap` | Full-stack Next.js scaffolding (Drizzle, Postgres, Redis, BullMQ, Auth.js) | nextjs-fullstack |
 | `/flutter-bootstrap` | Flutter project scaffolding (Riverpod, go_router, dio) | flutter |
 | `/astro-bootstrap` | Astro project scaffolding (Tailwind v4, DaisyUI, landing page) | astro |
 | `/visual-feedback` | Agentation MCP workflow for browser-annotated UI fixes | nextjs, nextjs-shadcn, nextjs-mui, astro |
 
-Profile lines prefixed with `cmd:` install to `.claude/commands/` instead of the default location:
-
-```
-cmd:react=skills/execution/react-best-practices.md
-cmd:tailwind=skills/execution/tailwind-v4-design-system.md
-cmd:django-bootstrap=skills/execution/django-bootstrap.md
-cmd:nextjs-bootstrap=skills/execution/nextjs-bootstrap.md
-cmd:astro-bootstrap=skills/execution/astro-bootstrap.md
-cmd:visual-feedback=skills/execution/visual-feedback.md
-```
+Command-only skills carry `disable-model-invocation: true` in their `SKILL.md` frontmatter — they don't auto-trigger and run as `/name`. Each Next.js variant now has its own bootstrap command (`/nextjs-bootstrap`, `/nextjs-shadcn-bootstrap`, `/nextjs-mui-bootstrap`) since a native skill's directory name is its command name.
 
 ## Axon Integration (Code Intelligence)
 
@@ -178,7 +164,7 @@ The `/scaffold` command auto-detects Axon and runs initial indexing when creatin
 | Execution | `axon_impact`, `axon_context` | Check blast radius before modifying symbols |
 | Verification | `axon_detect_changes`, `axon_dead_code` | Map diffs to affected symbols, catch orphaned code |
 
-See `skills/execution/axon-code-intel.md` for the full integration guide.
+See `skills/axon-code-intel/SKILL.md` for the full integration guide.
 
 ## Project Context
 
@@ -189,7 +175,7 @@ Polaris maintains a navigable context scaffold in `.claude/context/` so agents l
 | File | Purpose |
 |------|---------|
 | `ROUTER.md` | Maps task types to the right context files — read this first |
-| `architecture.md` | Stack, structure, constraints, key entry points |
+| `architecture.md` | Stack, structure, constraints, key entry points — generated by `/intel` (not a shipped template) |
 | `decisions.md` | Lightweight ADRs — why things are the way they are |
 | `conventions.md` | Naming, file organization, error handling norms |
 | `patterns/` | Reusable solutions discovered during implementation (one file per pattern) |
@@ -238,7 +224,7 @@ Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases a
 - Start sessions with `/recall` to load relevant project context
 - Single feature → branch, execute, review, PR, merge
 - After sessions, run `/remember` to capture decisions or patterns worth preserving
-- Multiple independent features → use git worktrees for parallel work (see `skills/git/worktrees.md`)
+- Multiple independent features → use git worktrees for parallel work (see the `/worktrees` skill)
 
 ## Cross-Repo Context
 
@@ -254,7 +240,7 @@ For full-stack work with decoupled repos:
 
 ## How It Works
 
-Running `./install.sh init` saves the repo location, adds a `polaris` shell alias, and merges required settings into `~/.claude/settings.json` — tool permissions, deny rules, and LSP plugins. Existing settings are preserved; only missing entries are added. Requires `jq` (`brew install jq`).
+Running `./install.sh init` saves the repo location, adds a `polaris` shell alias, and merges required settings into `~/.claude/settings.json` — a tool-permission allowlist (including a blanket `Bash` allow for autonomous workflows), LSP plugins, and the agent-teams `env` flag. Your existing settings are preserved and init prints a summary of exactly what it asserted. Re-running `init` is safe and idempotent: it re-asserts Polaris's permission allowlist, `enabledPlugins`, and `env` entries (adding any that are missing) without removing anything you added. Requires `jq` (`brew install jq`).
 
 Both `polaris global` and `polaris project` automatically generate a `CLAUDE.md` with references to all installed skills, agents, and commands. This is how Claude Code discovers your skills. By default it amends the existing CLAUDE.md (preserving your content); use `--fresh` with `polaris global` to start with a developer-defaults template, or `--no-claude-md` to skip generation entirely.
 
@@ -262,9 +248,9 @@ The install script **copies** files (not symlinks) so projects work independentl
 
 ```bash
 polaris status
-# ✓  current: skills/execution/django-patterns.md
-# ⚠  stale:   skills/verification/verify-django.md
-# ⚠  orphan:  skills/custom-thing.md (not in repo)
+# ✓  current: skills/django-patterns/SKILL.md
+# ⚠  stale:   skills/verify-django/SKILL.md
+# ⚠  orphan:  skills/custom-thing/SKILL.md (not in repo)
 ```
 
 Update with:
@@ -273,12 +259,14 @@ polaris global --force
 polaris project --stack django --stack nextjs --force
 ```
 
+> **Upgrading from a pre-native-skills install:** run the same `--force` reinstall (`polaris global --force`, `polaris project --stack … --force`). It installs the new `skills/<name>/SKILL.md` directories and — via manifest diffing — removes the old flat `skills/<cat>/*.md` and `commands/*.md` files your previous install left behind, so no orphaned files remain. Exception: installs old enough to have no `.polaris-manifest.json` can't be diffed — run `polaris uninstall` first, then a fresh `polaris project`.
+
 ## Customization
 
-- **Add a skill**: Create a `.md` file in the appropriate `skills/` subdirectory
-- **Add a profile**: Create a `.txt` file in `profiles/` listing the files to include
-- **Check your changes**: Run `./install.sh validate` — catches missing files, duplicate command names, and stack profiles without a CLAUDE.md snippet
-- **Add an on-demand command**: Use `cmd:name=path/to/skill.md` in a profile to install as `/name` slash command
-- **Add a project-specific skill**: Put it in `skills/misc/` and install with `--extra skills/misc/my-skill.md` (keeps it out of profiles)
+- **Add a skill**: Create `skills/<skill-name>/SKILL.md` with `name`/`description` frontmatter. Add `disable-model-invocation: true` for command-only skills, or `paths: ["**/*.ext"]` to auto-trigger only on matching files. See the `writing-skills` skill.
+- **Add a profile**: Create a `.txt` file in `profiles/` listing skill names (bare) and `agents/*.md` paths to include
+- **Check your changes**: Run `./install.sh validate` — catches missing skills, duplicate names, and stack profiles without a CLAUDE.md snippet
+- **Reference a skill in a profile**: List its bare directory name (e.g. `django-patterns`) on its own line; install copies the whole `skills/<name>/` dir to `.claude/skills/<name>/`
+- **Add a project-specific skill**: Put it in `skills/misc/` and install with `--extra skills/misc/my-skill.md`. `skills/misc/` is intentionally user-specific and not wired into any profile — files there (e.g. the tracked `vfx.md`) are accepted personal/project exceptions, not shipped defaults.
 - **Project overrides**: Edit installed files in your project's `.claude/` — they won't be overwritten unless you use `--force`
 - **Add an agent**: Create a `.md` file in `agents/`
