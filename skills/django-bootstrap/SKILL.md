@@ -41,8 +41,9 @@ Ask the user for these values (provide defaults where shown):
 1. Create `{service_name}/` directory and all subdirectories
 2. Generate all files from templates below, replacing placeholders (respecting blueprint tier tags)
 3. `cd {service_name} && make build && make up`
-4. `make migrate && make createsuperuser`
-5. Verify admin at `http://localhost:{host_port}/admin/`
+4. Standard/full only: `make makemigrations` first — the shipped `access/` app has only `migrations/__init__.py`, and `migrate` fails with `Dependency on app with no migrations: access` without it
+5. `make migrate && make createsuperuser`
+6. Verify admin at `http://localhost:{host_port}/admin/`
 
 ---
 
@@ -2084,7 +2085,7 @@ djangorestframework>=3.16,<4.0
 django-cors-headers>=4.4,<5.0
 django-environ>=0.11,<1.0
 django-admin-interface>=0.28,<1.0
-django-admin-auto-filters>=0.0.11
+django-admin-autocomplete-filter==0.7.1
 dj-database-url>=2.2,<3.0
 whitenoise>=6.7,<7.0
 gunicorn>=22.0,<23.0
@@ -2103,7 +2104,7 @@ django-cors-headers>=4.4,<5.0
 django-environ>=0.11,<1.0
 django-storages[boto3]>=1.14,<2.0
 django-admin-interface>=0.28,<1.0
-django-admin-auto-filters>=0.0.11
+django-admin-autocomplete-filter==0.7.1
 dj-database-url>=2.2,<3.0
 whitenoise>=6.7,<7.0
 gunicorn>=22.0,<23.0
@@ -2124,7 +2125,7 @@ django-cors-headers>=4.4,<5.0
 django-environ>=0.11,<1.0
 django-storages[boto3]>=1.14,<2.0
 django-admin-interface>=0.28,<1.0
-django-admin-auto-filters>=0.0.11
+django-admin-autocomplete-filter==0.7.1
 dj-database-url>=2.2,<3.0
 whitenoise>=6.7,<7.0
 gunicorn>=22.0,<23.0
@@ -2590,7 +2591,7 @@ Add `stripe` to `requirements.txt`.
 3. Copy `.env.example` to `.env`
 4. Verify Docker files exist: `Dockerfile.dev`, `docker-compose.yml`, `Makefile`, `docker/entrypoint.sh`, `docker/wait-for-it.sh`
 5. `make build && make up`
-6. `make migrate`
+6. `make migrate` (standard/full: run `make makemigrations` first — the shipped `access/` app has no migration files, so `migrate` alone fails with `Dependency on app with no migrations: access`)
 7. `make createsuperuser`
 8. Verify admin at `http://localhost:{host_port}/admin/`
 9. Add first app: `make manage startapp {app_name}`
@@ -2625,7 +2626,7 @@ Add `stripe` to `requirements.txt`.
    - `settings/__init__.py`: add `from .sentry import *`
 5. **Update Docker**: add `redis` service to `docker-compose.yml`, add `redis` to web's `depends_on`, add `redis_data` volume
 6. **Update `.env`**: add `REDIS_URL`, `JWT_ACCESS_TOKEN_LIFETIME_MINUTES`, `JWT_REFRESH_TOKEN_LIFETIME_DAYS`, `SENTRY_DSN` variables
-7. **Run**: `make build && make up && make migrate`
+7. **Run**: `make build && make up && make makemigrations && make migrate`
 
 ### Standard → Full (add Celery + cloud services)
 
