@@ -23,6 +23,9 @@ polaris global --fresh
 After init, use the `polaris` alias for all commands:
 
 ```bash
+# Create a brand-new project (interactive stack selection, ready to brainstorm)
+polaris new ~/prj/my-app
+
 # Install stack-specific skills in a project (interactive)
 cd ~/prj/my-app
 polaris project
@@ -91,6 +94,7 @@ Some skills are adapted from popular open-source skill repos:
 | Tailwind v4 Design System | [wshobson/agents](https://github.com/wshobson/agents) | `skills/tailwind/SKILL.md` |
 | React Best Practices | [vercel-labs/agent-skills](https://github.com/vercel-labs/agent-skills) | `skills/react/SKILL.md` |
 | Write as Human | [tropes.fyi](https://tropes.fyi) via [ossama.is](https://ossama.is) | `skills/write-as-human/SKILL.md` |
+| Relay (concept) | [aihero.dev — the handoff skill](https://www.aihero.dev/skills-handoff) | `skills/relay/SKILL.md` (rethought: narrative + pointers, never status) |
 | Hook runtime (concept) | [affaan-m/ECC](https://github.com/affaan-m/ECC) | `hooks/` (reimplemented in shell) |
 
 ## Profiles
@@ -126,7 +130,12 @@ Some heavy reference docs are installed as slash commands instead of always-load
 | `/remember` | Save a decision, convention, or pattern to the context scaffold | global |
 | `/recall` | Load relevant project context at session start | global |
 | `/reflect` | Session retrospective — bridges learnings into the context scaffold | global |
+| `/wrap` | End-of-session close-out — memory, context, connected stores, repo report | global |
+| `/relay` | Hand in-flight work to a fresh session (a steerable alternative to `/compact`) | global |
+| `/actionable` | Extract just the steps a human must do from a long answer | global |
+| `/scratch` | Set up and maintain a scratch-in/scratch-out paste board | global |
 | `/write-as-human` | Strip AI writing patterns from prose | global |
+| `/write-as-friend` | Casual register: plain-text messages for Discord/Slack/text/email | global |
 | `/react` | React best practices (57 rules) | nextjs, nextjs-shadcn, nextjs-mui |
 | `/tailwind` | Tailwind v4 design system | nextjs, nextjs-shadcn, astro |
 | `/verify-nextjs-shadcn` | ShadCN-specific verification checklist (components.json, `cn()`, next-themes) | nextjs-shadcn |
@@ -223,7 +232,8 @@ Or use `/autopilot` to run steps 4-6 hands-off — it loops through all phases a
 
 - Start sessions with `/recall` to load relevant project context
 - Single feature → branch, execute, review, PR, merge
-- After sessions, run `/remember` to capture decisions or patterns worth preserving
+- After sessions, run `/remember` to capture decisions or patterns worth preserving — or `/wrap` to close the whole session out (memory, context, repo report) in one command
+- Context getting heavy mid-task? `/relay` writes a compact handoff doc and a fresh session picks it up — you steer what carries over, unlike `/compact`
 - Multiple independent features → use git worktrees for parallel work (see the `/worktrees` skill)
 
 ## Cross-Repo Context

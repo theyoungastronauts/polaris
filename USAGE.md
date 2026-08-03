@@ -122,6 +122,8 @@ You: /remember We chose Stripe webhooks over polling because of real-time requir
 You: /remember API endpoints always return envelope format: { data, meta, errors }
 ```
 
+**At a milestone, or when a session might be abandoned:** Run `/wrap` — it closes the session out in one command: writes session memory and context entries outright, then proposes the curated updates (status lines, new tasks, commits) for approval. It delegates to `/reflect` for formats, so the two stay consistent.
+
 **Periodically:** Run `/intel` to refresh the scaffold after major changes. Run `/reflect` at session end — it now proposes writing structural findings to the scaffold.
 
 The scaffold grows over time as you add decisions, conventions, and patterns — but token cost stays flat because agents only load what's relevant per task (routed via `ROUTER.md`).
@@ -494,7 +496,7 @@ git worktree add ../api-billing -b feature/billing
 - **Fresh sessions for verification.** The whole point is fresh eyes. Don't verify in the same session that wrote the code.
 - **Commit the plan.** It's a living document — update it as you learn, but keep the history.
 - **Integration summaries are contracts.** If the backend changes, update the summary before the frontend consumes it.
-- **Use `/compact` in Claude Code** when context gets heavy during long execution phases.
+- **Use `/relay` when context gets heavy** during long execution phases. It writes a compact handoff doc (what you're doing, what was tried, what's next — never derivable status) and prints a line to paste into a fresh session, which re-derives state and picks up. Steerable, unlike `/compact` — you say what carries over. (`/compact` still works when you just want in-place compression.)
 - **Use `/react` or `/tailwind` when you need them.** These are on-demand commands — they only load into context when invoked, keeping your baseline token usage low.
 - **Use `/visual-feedback` for UI iteration.** Install [Agentation](https://agentation.dev) in your project, and humans can annotate the live page in the browser while Claude picks up fixes via MCP. The bootstrap skills offer this as an optional step, or invoke `/visual-feedback` for the workflow.
 - **Install Axon for structural awareness.** `pip install axoniq && axon analyze .` gives agents call graphs, impact analysis, and dead code detection. The MCP server (`axon serve --watch`) keeps the index current as you code. See `skills/axon-code-intel/SKILL.md`.

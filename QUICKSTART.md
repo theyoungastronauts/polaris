@@ -86,7 +86,8 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 ## Ongoing Development
 
 - [ ] `/recall` at session start — loads relevant project context
-- [ ] `/remember` at session end — captures decisions and patterns
+- [ ] `/wrap` at session end — one-command close-out: memory, context, repo report (`/remember` for a single targeted save)
+- [ ] `/relay` when context gets heavy mid-task — hand off to a fresh session instead of `/compact`
 
 **Single feature:** branch → `/execute` → `/verify` → PR → merge
 

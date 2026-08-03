@@ -124,7 +124,12 @@ Command-only skills (`disable-model-invocation: true`), installed to `.claude/sk
 | `/remember` | Save a decision, convention, or pattern to the scaffold |
 | `/recall` | Load relevant project context at session start |
 | `/reflect` | Session reflection/retrospective |
+| `/wrap` | End-of-session close-out (memory + context + connected stores + repo report) |
+| `/relay` | Hand in-flight work to a fresh session (steerable /compact alternative) |
+| `/actionable` | Extract just the human-required steps from a long answer |
+| `/scratch` | Scratch-in/scratch-out paste board setup + discipline |
 | `/write-as-human` | Strip AI writing patterns from prose |
+| `/write-as-friend` | Casual plain-text messages (Discord/Slack/text/email register) |
 | `/django-bootstrap` | Scaffold Django project |
 | `/nextjs-bootstrap` · `/nextjs-shadcn-bootstrap` · `/nextjs-mui-bootstrap` | Scaffold a Next.js project (DaisyUI / ShadCN / Material UI) |
 | `/nextjs-fullstack-bootstrap` | Scaffold full-stack Next.js project |
