@@ -42,6 +42,7 @@ scratch
 # Meta
 writing-skills
 reflect
+wrap
 
 # Git
 commit-conventions
