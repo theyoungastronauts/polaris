@@ -37,7 +37,7 @@ Formal AI writing gets caught on ornate vocabulary. Casual AI writing gets caugh
 
 ## Medium
 
-The optional first argument tunes format. If it's absent, ask which medium — one question, then write. Never guess between Discord and email; they're not the same message.
+The optional first argument tunes format. **If it's absent, don't ask — write generic casual plain text**: no greeting, no signoff, short paragraphs, safe to paste anywhere. Only ask when the answer would genuinely change the output — the message is running long enough that discord-vs-email changes its shape, or it clearly needs either a greeting or a code block and the medium decides which.
 
 **discord / slack** — Short. Blank lines instead of paragraphs. Code goes in a fenced block (the one markdown exception; both render it). Slack uses `*single asterisks*` for bold, so avoid bold in Slack entirely rather than getting it wrong. No greeting, no signoff. Long content gets split at a natural break, and you say where the split is.
 
@@ -56,6 +56,7 @@ Either way, output the message and nothing else. No "here's a draft", no explana
 ## Common mistakes
 
 - **Applying the formal register in lowercase.** Same sentence shapes, different capitalization, still reads as AI.
+- **Blocking on the medium question.** No medium given means generic casual, not an interrogation.
 - **Over-friendly opener.** "Hope you're doing well!" is the loudest tell in the list.
 - **Explaining the message after writing it.** Send the message.
 - **Markdown leaking in.** Bullets and bold are the giveaway that a machine wrote it.

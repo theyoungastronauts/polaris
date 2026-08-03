@@ -10,7 +10,7 @@ The user got a long answer — "I did a bunch of things, and also you need to do
 
 ## This is a reading task, not an investigation
 
-**Do not use tools.** No git, no greps, no checking other repos, no reading config, no verifying anything against the environment. The answer is already in the conversation; go get it out.
+**Do not use tools**, with one exception: when the user explicitly names a source (a file path or URL as the argument), one read of that one thing. No git, no greps, no checking other repos, no reading config, no verifying anything against the environment, no opening anything beyond the named source. In the default case the answer is already in the conversation; go get it out.
 
 If a real investigation is warranted, that's a different request and the user will make it. Going off to check things is the main way this skill fails: it turns a five-second answer into a minute of tool calls and surfaces findings nobody asked for.
 

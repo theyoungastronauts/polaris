@@ -61,7 +61,7 @@ If nothing is installed, skip both extension steps silently. Absence is the norm
 
 ### Writing a Close-out section
 
-If you own such a skill, add a section like this and wrap will pick it up:
+Two requirements, and discovery fails without the first: **the skill's `description` must name what it owns** (a second brain, a vault, a task tracker) — that description is the only thing wrap sees when scanning for extensions, so a Close-out section in a skill whose description doesn't flag it will never be found. Second, the section itself:
 
 ```markdown
 ## Close-out

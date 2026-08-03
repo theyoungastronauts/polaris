@@ -75,14 +75,16 @@ section — it's what stops the next session repeating the work.>
 Then print exactly:
 
 ```
-Read ~/.claude/relays/<slug>-<timestamp>.md and pick up from there.
+/relay ~/.claude/relays/<slug>-<timestamp>.md
 ```
+
+The paste line must be the slash command, not a plain-English "read this file" — this skill is command-only, so an English sentence would never load it in the fresh session, and none of the resume discipline below would apply.
 
 **Sanitize before writing.** No API keys, tokens, passwords, connection strings, or personal data. Reference them by name (`ANTHROPIC_API_KEY is set locally and on Vercel`), never by value.
 
 ## Mode 2 — resume (`/relay <path>`)
 
-If the argument resolves to a readable file, this is resume mode. It also triggers on a plain-English "read <relay path> and pick up from there."
+If the argument resolves to a readable file, this is resume mode.
 
 1. Read the doc.
 2. **Derive current state before trusting anything.** Branch, dirty files, recent commits, whether the named files exist and what they contain now, open tasks. The doc's pointers tell you where to look; they do not tell you what you'll find.
