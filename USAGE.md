@@ -126,7 +126,7 @@ You: /remember API endpoints always return envelope format: { data, meta, errors
 
 **Periodically:** Run `/intel` to refresh the scaffold after major changes. Run `/reflect` at session end — it now proposes writing structural findings to the scaffold.
 
-The scaffold grows over time as you add decisions, conventions, and patterns — but token cost stays flat because agents only load what's relevant per task (routed via `ROUTER.md`).
+The scaffold grows over time as you add decisions, conventions, and patterns — without growing the *always-loaded* context, because agents route via `ROUTER.md` and pull only what's relevant per task. (The trade: retrieval can misroute; keep ROUTER.md small and explicit.)
 
 ---
 

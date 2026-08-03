@@ -57,7 +57,9 @@ polaris/
 ├── context-pull.sh         # Cross-repo context extraction
 ├── skills/                 # Native Agent Skills — one dir per skill: skills/<name>/SKILL.md.
 │   │                       # Frontmatter sets behavior: auto-trigger (description / paths glob)
-│   │                       # or command-only (disable-model-invocation). ~52 skills.
+│   │                       # or command-only (disable-model-invocation). ~52 skills in the repo,
+│   │                       # but a project only gets its profile's subset — and most are
+│   │                       # on-demand commands that cost zero context until invoked.
 │   └── misc/               # Project-specific skills (flat .md, not in any profile — e.g. vfx.md)
 ├── agents/
 │   ├── planner.md          # Planning agent
@@ -153,7 +155,7 @@ Command-only skills carry `disable-model-invocation: true` in their `SKILL.md` f
 
 ## Axon Integration (Code Intelligence)
 
-Polaris integrates with [Axon](https://github.com/harshkedia177/axon), a graph-powered structural analysis tool that indexes codebases into a knowledge graph. If installed, Axon provides MCP tools for call graphs, impact analysis, dead code detection, and execution flow tracing — giving agents structural awareness beyond text search.
+Polaris optionally integrates with [Axon](https://github.com/harshkedia177/axon) — a third-party (not ours), graph-powered structural analysis tool that indexes codebases into a knowledge graph. Nothing in Polaris requires it; skip this section freely. If installed, Axon provides MCP tools for call graphs, impact analysis, dead code detection, and execution flow tracing — giving agents structural awareness beyond text search.
 
 **Setup:**
 
@@ -196,7 +198,7 @@ Polaris maintains a navigable context scaffold in `.claude/context/` so agents l
 3. Use `/remember` after sessions to capture new decisions, conventions, or patterns
 4. Run `/reflect` at session end — it now bridges session learnings into the scaffold
 
-The scaffold grows over time without growing token cost — agents read ROUTER.md (under 50 lines) and pull only the files relevant to their current task.
+The scaffold grows over time without growing the *always-loaded* context — agents read ROUTER.md (under 50 lines) and pull only the files relevant to their current task. The honest trade: the cost moves from a guaranteed load to a retrieval decision, so a bad route reads the wrong file. ROUTER.md staying small and explicit is what keeps that failure rare.
 
 ## Hooks (Optional Guardrails)
 
@@ -268,6 +270,8 @@ Update with:
 polaris global --force
 polaris project --stack django --stack nextjs --force
 ```
+
+**Uninstall** is first-class, not an afterthought: `polaris uninstall` removes everything Polaris installed in a project — tracked via the install manifest, so your own skills, commands, and CLAUDE.md content outside the Polaris markers are preserved. If it can't tell whether a file is yours, it keeps it and says so. Everything Polaris installs is plain markdown you can also just delete.
 
 > **Upgrading from a pre-native-skills install:** run the same `--force` reinstall (`polaris global --force`, `polaris project --stack … --force`). It installs the new `skills/<name>/SKILL.md` directories and — via manifest diffing — removes the old flat `skills/<cat>/*.md` and `commands/*.md` files your previous install left behind, so no orphaned files remain. Exception: installs old enough to have no `.polaris-manifest.json` can't be diffed — run `polaris uninstall` first, then a fresh `polaris project`.
 

@@ -9,7 +9,7 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 - [ ] `./install.sh init` — saves repo path, adds `polaris` alias
 - [ ] `source ~/.zshrc` — pick up the alias
 - [ ] `polaris global --fresh` — install global skills + developer defaults
-- [ ] `pip install axoniq` — (recommended) install Axon for structural code intelligence
+- [ ] `pip install axoniq` — optional: [Axon](https://github.com/harshkedia177/axon) is a third-party code-graph tool (call graphs, impact analysis) that Polaris uses over MCP when present; everything works without it
 
 ## New Project
 
