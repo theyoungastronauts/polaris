@@ -1,81 +1,71 @@
 ---
 name: actionable
-description: "Extract only the steps a human has to do personally from a wall of text, output, or long explanation."
+description: "Pull just the do-this-yourself steps out of a long answer, so the user doesn't have to read the whole thing."
 disable-model-invocation: true
 ---
 
 # Actionable
 
-Reduce something long to the short list of things the **user personally** has to do. Everything else is noise or is your job.
+The user got a long answer — "I did a bunch of things, and also you need to do these two things" — and doesn't have time to read it. Find the two things. Print them. Stop.
 
-Typical triggers: a long build/deploy explanation, a README, a migration guide, an error dump, a spec, or your own previous answer that ran long.
+## This is a reading task, not an investigation
+
+**Do not use tools.** No git, no greps, no checking other repos, no reading config, no verifying anything against the environment. The answer is already in the conversation; go get it out.
+
+If a real investigation is warranted, that's a different request and the user will make it. Going off to check things is the main way this skill fails: it turns a five-second answer into a minute of tool calls and surfaces findings nobody asked for.
 
 ## Source
 
-- No argument: the immediately preceding content in this conversation.
-- A file path or URL: that content.
-- Pasted text after the command: that text.
+- **Default: the last assistant message**, plus the few before it if the thread is one continuous piece of work. Nothing older, nothing outside this conversation.
+- A file path or URL passed as an argument: read that one thing. It's the only file you open.
+- Text pasted after the command: that text.
 
 ## The filter
 
-An item makes the list only if it needs a human. Almost always that means one of:
+Keep an item only if it needs the user personally:
 
-- A credential, key, or secret the user must obtain or paste
-- A click in a web console the user is logged into (Vercel, Porter, Cloudflare, Stripe, a cloud provider)
+- A credential, key, or secret they must obtain or paste
+- A click in a web console they're logged into (Vercel, Porter, Cloudflare, Stripe, a cloud provider)
 - A purchase, plan upgrade, quota increase, or billing change
 - An approval, signature, invite, or permission grant
 - A physical or account action (plug in a device, verify an email, enable 2FA)
-- A decision only the user can make, where you genuinely cannot pick a default
+- A choice you can't make for them
 
-Everything else — installing packages, editing config, running migrations, writing code, starting a local service — is **yours**. It does not go on the user's list.
+Drop everything else. Installing, configuring, migrating, coding, running a local service — yours, not theirs.
 
-## Verify before listing
-
-Check each candidate against reality before you print it. Most of the value is in the items you *remove*.
-
-- Env var: grep `.env`, `.env.local`, the deploy config. Already set? Drop it.
-- Service to run: check whether it's already listening (`lsof -nP -iTCP -sTCP:LISTEN`) or already in compose.
-- Package or CLI: check whether it's installed.
-- File to create: check whether it exists.
-
-If a check needs a command you can just run, run it. Never list something you haven't confirmed is actually outstanding, and never pad the list with steps from the source that don't apply here.
+Also drop anything the conversation already says is done. That's from what you've read, not from going and checking.
 
 ## Output
 
-Terse. Numbered. Ordered so nothing blocks the next thing. No preamble, no restating what the source said, no closing summary.
+Two or three items, usually. Numbered, ordered so nothing blocks the next. No preamble, no recap, no closing summary — the whole point is that the user isn't reading the long version.
 
-Each item is one imperative line, plus — only when needed — the exact place and the exact value on its own line:
+One imperative line each. Add the exact place or a paste-ready value on a second line only when the line is useless without it:
 
 ```
 1. Add ANTHROPIC_API_KEY to Vercel (marquee → Settings → Environment Variables, all envs)
 2. Create the Discord webhook and send me the URL
    Server Settings → Integrations → Webhooks → New
-3. Upgrade the Neon plan to Scale — the branch limit is the blocker
 ```
 
-Make values paste-ready. If a command is the fastest path, give the exact command, not a description of it.
-
-Then, if there are things you can do yourself, one line:
+If you can do the rest, one line:
 
 ```
-I can handle the rest (install deps, wire the client, run the migration) — say go.
+I can handle the rest — say go.
 ```
 
-If nothing needs the user, say so in one line and stop:
+If nothing needs them, one line and stop:
 
 ```
 Nothing needs you. I can do all of it — say go.
 ```
 
-## Length
-
-Under ten items. If the honest list is longer, the work needs splitting into stages — give the first stage's items and name what the next stage covers in one line.
+More than five items means the source was a plan, not an answer. Give the ones that come first and say in one line what the rest are waiting on.
 
 ## Common mistakes
 
-- **Listing your own work.** "Install the dependency" is not a human step.
-- **Copying the source's structure.** You are replacing it, not summarizing it.
-- **Listing things already done.** Check first. A list of already-done items destroys trust in the whole list.
-- **Vague placement.** "Set the env var in your hosting provider" — name the provider, the project, and the screen.
-- **Explaining why.** Only if the user cannot act without it, and then in a clause, not a paragraph.
-- **Adding a recap.** The point is that the user is not reading the long version.
+- **Going and checking.** The most common failure. Read; don't verify.
+- **Reporting what you noticed along the way.** No findings, no asides, no "one thing worth flagging."
+- **Listing your own work.** "Install the dependency" is not a step for the user.
+- **Following the source's structure.** You're replacing it, not summarizing it.
+- **Vague placement.** Name the provider, the project, and the screen.
+- **Explaining why.** Only if they can't act without it, and then as a clause.
