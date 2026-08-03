@@ -336,7 +336,7 @@ See the `/full-feature` workflow for where these fit in the overall workflow.
 
 ## Step 4: Verify
 
-Open a **new, separate Claude Code session** in the same directory. Fresh context is the point — the reviewer shouldn't inherit the executor's assumptions.
+Open a **new, separate Claude Code session** in the same directory. Fresh context is the point — and here's the mechanism, since it's not obvious why the same model in a new window is different: a session's context holds everything the executor read, assumed, and told itself while writing the code, including its justifications for every shortcut. A verifier sharing that context inherits those justifications and grades its own homework. A fresh session has only the code, the tests, and the plan — it must reconstruct what the work does from the artifacts alone, which is exactly what a human reviewer does and exactly where gaps show up.
 
 ```bash
 cd ~/prj/my-app/api

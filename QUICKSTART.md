@@ -6,10 +6,13 @@ Cheat sheet for scaffolding a new project. See [USAGE.md](USAGE.md) for full det
 
 ## First-Time Setup (once)
 
+- [ ] `git clone https://github.com/theyoungastronauts/polaris.git ~/prj/polaris && cd ~/prj/polaris`
 - [ ] `./install.sh init` — saves repo path, adds `polaris` alias
 - [ ] `source ~/.zshrc` — pick up the alias
 - [ ] `polaris global --fresh` — install global skills + developer defaults
 - [ ] `pip install axoniq` — optional: [Axon](https://github.com/harshkedia177/axon) is a third-party code-graph tool (call graphs, impact analysis) that Polaris uses over MCP when present; everything works without it
+
+**Safe on an existing setup.** Plain `polaris global` amends: CLAUDE.md content outside the Polaris markers is preserved, `settings.json` is merged (nothing of yours removed), and every file written is manifest-tracked so `polaris uninstall` removes exactly what was added. `--fresh` is the one flag that replaces your CLAUDE.md — it backs the old one up first. When in doubt, drop `--fresh`.
 
 ## New Project
 

@@ -116,7 +116,7 @@ Stacks are composable — select a backend and one or more frontends during `pol
 
 ## On-Demand Commands
 
-Some heavy reference docs are installed as slash commands instead of always-loaded skills. They only enter context when you invoke them.
+A command is just a skill with auto-triggering turned off — same markdown format, same install, but it loads only when you type `/name`, so it costs zero context until then. Heavy reference docs and deliberate workflows ship this way instead of as always-loaded skills.
 
 | Command | What | Profiles |
 |---------|------|----------|
