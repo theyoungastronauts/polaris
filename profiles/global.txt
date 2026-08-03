@@ -28,10 +28,16 @@ axon-code-intel
 # Writing
 writing-clearly
 write-as-human
+write-as-friend
+actionable
 
 # Memory & context
 remember
 recall
+relay
+
+# Workspace
+scratch
 
 # Meta
 writing-skills

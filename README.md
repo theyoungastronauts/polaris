@@ -54,7 +54,7 @@ polaris/
 ├── context-pull.sh         # Cross-repo context extraction
 ├── skills/                 # Native Agent Skills — one dir per skill: skills/<name>/SKILL.md.
 │   │                       # Frontmatter sets behavior: auto-trigger (description / paths glob)
-│   │                       # or command-only (disable-model-invocation). ~46 skills.
+│   │                       # or command-only (disable-model-invocation). ~51 skills.
 │   └── misc/               # Project-specific skills (flat .md, not in any profile — e.g. vfx.md)
 ├── agents/
 │   ├── planner.md          # Planning agent

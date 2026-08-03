@@ -16,7 +16,7 @@ install.sh              Installer (init, global, new, project, uninstall, hooks,
 context-pull.sh         Extracts Django backend context for frontend sessions
 skills/                 Native Agent Skills — one dir per skill: skills/<name>/SKILL.md.
                         Frontmatter sets behavior: auto-trigger (description / paths glob) or
-                        command-only (disable-model-invocation → /name). ~46 skills, e.g.
+                        command-only (disable-model-invocation → /name). ~51 skills, e.g.
                         plan-and-scope, phase-breakdown, scaffold, execute, verify, autopilot,
                         orchestrator, intel, work-discipline, {django,nextjs,flutter,astro}-patterns,
                         *-bootstrap, verify-{django,nextjs,flutter,astro,…}, recall, remember, reflect.
